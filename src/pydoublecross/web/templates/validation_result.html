@@ -1,0 +1,89 @@
+<!--
+SPDX-FileCopyrightText: 2026 James G Willmore
+SPDX-License-Identifier: Apache-2.0
+-->
+{% extends "base.html" %}
+{% block title %}Result - {{ item_name }} - pyDoubleCross{% endblock %}
+{% block content %}
+  {% if not result %}
+    <p class="alert alert-error">No such result.</p>
+  {% else %}
+    <h1>
+      {{ item_name }}
+      <span class="status status-{{ result.status.value }}">{{ result.status.value }}</span>
+    </h1>
+    <p>
+      Run <code>{{ result.run_id }}</code> &middot;
+      started {{ result.started_at }} &middot; finished {{ result.finished_at }} &middot;
+      <a href="/api/reports/{{ item_name }}/{{ result.run_id }}?format=excel">Export to Excel</a>
+    </p>
+
+    {% if result.error %}
+      <p class="alert alert-error">{{ result.error }}</p>
+    {% endif %}
+
+    {% if result.summary %}
+      <div class="cards">
+        <div class="card"><span>{{ result.summary.source_row_count }}</span>Source rows</div>
+        <div class="card"><span>{{ result.summary.target_row_count }}</span>Target rows</div>
+        <div class="card"><span>{{ result.summary.matched_row_count }}</span>Matched rows</div>
+        <div class="card"><span>{{ result.summary.missing_in_target_count }}</span>Missing in target</div>
+        <div class="card"><span>{{ result.summary.missing_in_source_count }}</span>Missing in source</div>
+        <div class="card"><span>{{ result.summary.mismatched_row_count }}</span>Mismatched rows</div>
+        <div class="card"><span>{{ result.summary.mismatched_cell_count }}</span>Mismatched cells</div>
+      </div>
+    {% endif %}
+
+    <p>Source cache hit: {{ result.source_cache_hit }} &middot; Target cache hit: {{ result.target_cache_hit }}
+      {% if result.truncated %}&middot; <strong>sample lists truncated</strong>{% endif %}</p>
+
+    <h2>Great Expectations</h2>
+    <table class="data-table">
+      <thead><tr><th>Side</th><th>Success</th><th>Evaluated</th><th>Failed</th><th>Failed types</th></tr></thead>
+      <tbody>
+        {% for ge in result.ge_results %}
+          <tr>
+            <td>{{ ge.role }}</td>
+            <td>{{ ge.success }}</td>
+            <td>{{ ge.expectations_evaluated }}</td>
+            <td>{{ ge.expectations_failed }}</td>
+            <td>{{ ge.failed_expectation_types | join(", ") }}</td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+
+    <h2>Value Mismatches ({{ result.mismatches | length }})</h2>
+    <table class="data-table">
+      <thead><tr><th>Key</th><th>Column</th><th>Source value</th><th>Target value</th></tr></thead>
+      <tbody>
+        {% for m in result.mismatches %}
+          <tr>
+            <td>{{ m.key }}</td>
+            <td>{{ m.column }}</td>
+            <td>{{ m.source_value }}</td>
+            <td>{{ m.target_value }}</td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+
+    <h2>Missing in Target ({{ result.missing_in_target | length }})</h2>
+    <table class="data-table">
+      <tbody>
+        {% for row in result.missing_in_target %}
+          <tr><td>{{ row }}</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+
+    <h2>Missing in Source ({{ result.missing_in_source | length }})</h2>
+    <table class="data-table">
+      <tbody>
+        {% for row in result.missing_in_source %}
+          <tr><td>{{ row }}</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  {% endif %}
+{% endblock %}

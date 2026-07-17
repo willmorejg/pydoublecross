@@ -1,0 +1,107 @@
+<!--
+SPDX-FileCopyrightText: 2026 James G Willmore
+SPDX-License-Identifier: Apache-2.0
+-->
+{% extends "base.html" %}
+{% block title %}{{ "Edit" if name else "New" }} Validation - pyDoubleCross{% endblock %}
+
+{% macro cache_select_value(ref) -%}
+  {%- if ref is none or ref.cache.enabled is none -%}inherit
+  {%- elif ref.cache.enabled -%}on
+  {%- else -%}off
+  {%- endif -%}
+{%- endmacro %}
+
+{% macro ref_panel(prefix, label, ref) %}
+  <fieldset class="panel">
+    <legend>{{ label }}</legend>
+    <label>Data source
+      <select name="{{ prefix }}_data_source" required>
+        {% for ds_name in data_sources.keys() %}
+          <option value="{{ ds_name }}" {{ "selected" if ref and ref.data_source == ds_name else "" }}>{{ ds_name }}</option>
+        {% endfor %}
+      </select>
+    </label>
+
+    <label>SQL query (leave blank to use a table name instead)
+      <textarea name="{{ prefix }}_sql" rows="4" placeholder="SELECT * FROM ...">{{ ref.sql if ref and ref.sql else "" }}</textarea>
+    </label>
+    <label>...or table name
+      <input type="text" name="{{ prefix }}_table" value="{{ ref.table if ref and ref.table else "" }}">
+    </label>
+
+    <label>Cache
+      <select name="{{ prefix }}_cache_enabled">
+        <option value="inherit" {{ "selected" if cache_select_value(ref) == "inherit" else "" }}>Inherit from data source</option>
+        <option value="on" {{ "selected" if cache_select_value(ref) == "on" else "" }}>Force enabled</option>
+        <option value="off" {{ "selected" if cache_select_value(ref) == "off" else "" }}>Force disabled</option>
+      </select>
+    </label>
+    <label>
+      <input type="checkbox" name="{{ prefix }}_force_refresh" {{ "checked" if ref and ref.cache.force_refresh else "" }}>
+      Force refresh on next run
+    </label>
+  </fieldset>
+{% endmacro %}
+
+{% block content %}
+  <h1>{{ "Edit" if name else "New" }} Validation Item</h1>
+
+  <form method="post" action="{{ '/validations/' ~ name if name else '/validations' }}">
+    {% if not name %}
+      <label>Name
+        <input type="text" name="name" required pattern="[A-Za-z0-9_\-]+">
+      </label>
+    {% endif %}
+    <label>Description
+      <input type="text" name="description" value="{{ item.description if item and item.description else "" }}">
+    </label>
+
+    <div class="columns">
+      {{ ref_panel("source", "Source", item.source if item else none) }}
+      {{ ref_panel("target", "Target", item.target if item else none) }}
+    </div>
+
+    <fieldset>
+      <legend>Comparison</legend>
+      <label>Key columns (comma-separated)
+        <input type="text" name="key_columns" required
+               value="{{ item.key_columns | join(', ') if item else "" }}">
+      </label>
+      <label>Compare columns (comma-separated, blank = all common columns)
+        <input type="text" name="compare_columns"
+               value="{{ item.compare_columns | join(', ') if item and item.compare_columns else "" }}">
+      </label>
+      <label>Ignore columns (comma-separated)
+        <input type="text" name="ignore_columns"
+               value="{{ item.ignore_columns | join(', ') if item and item.ignore_columns else "" }}">
+      </label>
+      <label>Numeric tolerance
+        <input type="number" step="any" name="numeric_tolerance"
+               value="{{ item.numeric_tolerance if item else 0 }}">
+      </label>
+    </fieldset>
+
+    <fieldset>
+      <legend>Great Expectations checks (per side)</legend>
+      <label>
+        <input type="checkbox" name="row_count_match"
+               {{ "checked" if not item or item.expectations.row_count_match else "" }}>
+        Row count &gt; 0
+      </label>
+      <label>
+        <input type="checkbox" name="schema_match"
+               {{ "checked" if not item or item.expectations.schema_match else "" }}>
+        Schema / columns match
+      </label>
+      <label>
+        <input type="checkbox" name="null_checks"
+               {{ "checked" if not item or item.expectations.null_checks else "" }}>
+        Null checks
+      </label>
+    </fieldset>
+
+    <button type="submit">Save</button>
+    <a href="/">Cancel</a>
+  </form>
+{% endblock %}

@@ -1,0 +1,61 @@
+<!--
+SPDX-FileCopyrightText: 2026 James G Willmore
+SPDX-License-Identifier: Apache-2.0
+-->
+{% extends "base.html" %}
+{% block title %}Dashboard - pyDoubleCross{% endblock %}
+{% block content %}
+  <h1>Validation Items</h1>
+
+  {% if error %}
+    <p class="alert alert-error">{{ error }}</p>
+  {% endif %}
+
+  {% if not items %}
+    <p>No validation items configured yet. <a href="/validations/new">Create one</a>.</p>
+  {% else %}
+    <table class="data-table">
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>Description</th>
+          <th>Source</th>
+          <th>Target</th>
+          <th>Last Run</th>
+          <th>Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for item in items %}
+          <tr>
+            <td>{{ item.name }}</td>
+            <td>{{ item.description or "" }}</td>
+            <td>{{ item.source_data_source }}</td>
+            <td>{{ item.target_data_source }}</td>
+            <td>
+              {% if item.last_run %}
+                <a href="/validations/{{ item.name }}/results/{{ item.last_run.run_id }}"
+                   class="status status-{{ item.last_run.status.value }}">
+                  {{ item.last_run.status.value }}
+                </a>
+              {% else %}
+                <span class="status status-none">never run</span>
+              {% endif %}
+            </td>
+            <td class="actions">
+              <form method="post" action="/validations/{{ item.name }}/run" style="display:inline">
+                <button type="submit">Run</button>
+              </form>
+              <a href="/validations/{{ item.name }}/edit">Edit</a>
+              <a href="/validations/{{ item.name }}/results">History</a>
+              <form method="post" action="/validations/{{ item.name }}/delete" style="display:inline"
+                    onsubmit="return confirm('Delete validation item {{ item.name }}?');">
+                <button type="submit" class="danger">Delete</button>
+              </form>
+            </td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  {% endif %}
+{% endblock %}

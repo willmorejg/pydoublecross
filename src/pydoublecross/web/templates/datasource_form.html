@@ -1,0 +1,72 @@
+<!--
+SPDX-FileCopyrightText: 2026 James G Willmore
+SPDX-License-Identifier: Apache-2.0
+-->
+{% extends "base.html" %}
+{% block title %}{{ "Edit" if name else "New" }} Data Source - pyDoubleCross{% endblock %}
+{% block content %}
+  <h1>{{ "Edit" if name else "New" }} Data Source</h1>
+
+  <form method="post" action="{{ '/datasources/' ~ name if name else '/datasources' }}" class="panel">
+    {% if not name %}
+      <label>Name
+        <input type="text" name="name" required pattern="[A-Za-z0-9_\-]+">
+      </label>
+    {% endif %}
+
+    <label>Type
+      <select name="type" required>
+        {% for t in ["sqlite", "duckdb", "mssql", "azure_sql", "postgresql", "mysql", "oracle"] %}
+          <option value="{{ t }}" {{ "selected" if ds and ds.type == t else "" }}>{{ t }}</option>
+        {% endfor %}
+      </select>
+    </label>
+
+    <fieldset>
+      <legend>File-based (SQLite / DuckDB)</legend>
+      <label>Path
+        <input type="text" name="path" value="{{ ds.path if ds else '' }}" placeholder="./examples/warehouse.duckdb">
+      </label>
+    </fieldset>
+
+    <fieldset>
+      <legend>Server-based (MSSQL / Azure SQL / PostgreSQL / MySQL / Oracle)</legend>
+      <label>Host
+        <input type="text" name="host" value="{{ ds.host if ds else '' }}">
+      </label>
+      <label>Port
+        <input type="number" name="port" value="{{ ds.port if ds else '' }}">
+      </label>
+      <label>Database
+        <input type="text" name="database" value="{{ ds.database if ds else '' }}">
+      </label>
+      <label>Username
+        <input type="text" name="username" value="{{ ds.username if ds else '' }}">
+      </label>
+      <label>Password
+        <input type="password" name="password" placeholder="{{ '(unchanged)' if ds and ds.password else '' }}">
+      </label>
+      <label>Driver (MSSQL only)
+        <input type="text" name="driver" value="{{ ds.driver if ds else '' }}" placeholder="ODBC Driver 18 for SQL Server">
+      </label>
+      <label>Extra params (one KEY=VALUE per line, e.g. sslmode=require)
+        <textarea name="extra_params" rows="3">{% if ds %}{% for k, v in ds.extra_params.items() %}{{ k }}={{ v }}
+{% endfor %}{% endif %}</textarea>
+      </label>
+    </fieldset>
+
+    <fieldset>
+      <legend>Default caching</legend>
+      <label>
+        <input type="checkbox" name="cache_enabled" {{ "checked" if ds and ds.cache.enabled else "" }}>
+        Cache results by default
+      </label>
+      <label>TTL (seconds)
+        <input type="number" name="cache_ttl_seconds" value="{{ ds.cache.ttl_seconds if ds else 3600 }}">
+      </label>
+    </fieldset>
+
+    <button type="submit">Save</button>
+    <a href="/datasources">Cancel</a>
+  </form>
+{% endblock %}

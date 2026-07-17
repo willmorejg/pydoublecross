@@ -1,0 +1,26 @@
+<!--
+SPDX-FileCopyrightText: 2026 James G Willmore
+SPDX-License-Identifier: Apache-2.0
+-->
+{% extends "base.html" %}
+{% block title %}History - {{ item_name }} - pyDoubleCross{% endblock %}
+{% block content %}
+  <h1>Run History — {{ item_name }}</h1>
+  {% if not results %}
+    <p>No runs yet.</p>
+  {% else %}
+    <table class="data-table">
+      <thead><tr><th>Run</th><th>Status</th><th>Started</th><th>Finished</th></tr></thead>
+      <tbody>
+        {% for r in results %}
+          <tr>
+            <td><a href="/validations/{{ item_name }}/results/{{ r.run_id }}">{{ r.run_id }}</a></td>
+            <td><span class="status status-{{ r.status.value }}">{{ r.status.value }}</span></td>
+            <td>{{ r.started_at }}</td>
+            <td>{{ r.finished_at }}</td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  {% endif %}
+{% endblock %}

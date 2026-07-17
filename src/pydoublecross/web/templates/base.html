@@ -1,0 +1,27 @@
+<!--
+SPDX-FileCopyrightText: 2026 James G Willmore
+SPDX-License-Identifier: Apache-2.0
+-->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{% block title %}pyDoubleCross{% endblock %}</title>
+  <link rel="stylesheet" href="/static/css/app.css">
+  <script src="https://unpkg.com/htmx.org@2.0.3" defer></script>
+</head>
+<body>
+  <header class="topbar">
+    <a class="brand" href="/">pyDoubleCross</a>
+    <nav>
+      <a href="/">Dashboard</a>
+      <a href="/datasources">Data Sources</a>
+      <a href="/validations/new">New Validation</a>
+    </nav>
+  </header>
+  <main class="content">
+    {% block content %}{% endblock %}
+  </main>
+</body>
+</html>

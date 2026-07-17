@@ -1,0 +1,194 @@
+# SPDX-FileCopyrightText: 2026 James G Willmore
+# SPDX-License-Identifier: Apache-2.0
+
+"""Pandas-based, key-column row/value comparison between two dataframes.
+
+This is deliberately separate from Great Expectations: GE validates one
+batch against a suite of expectations, it does not diff two batches against
+each other. Cross-source row and value comparison lives here instead.
+"""
+
+from __future__ import annotations
+
+import numpy as np
+import pandas as pd
+
+from pydoublecross.exceptions import ValidationEngineError
+from pydoublecross.validation.results import (
+    MAX_SAMPLE_ROWS,
+    ColumnMismatch,
+    ComparisonOutcome,
+    ComparisonSummary,
+)
+
+
+def _to_native(value: object) -> object:
+    """Convert numpy/pandas scalars to plain Python types so results are JSON-serializable."""
+    if isinstance(value, np.generic):
+        value = value.item()
+    if value is None or (isinstance(value, float) and pd.isna(value)):
+        return None
+    return value
+
+
+def _resolve_compare_columns(
+    source: pd.DataFrame,
+    target: pd.DataFrame,
+    key_columns: list[str],
+    compare_columns: list[str] | None,
+    ignore_columns: list[str],
+) -> list[str]:
+    if compare_columns is not None:
+        missing_source = [c for c in compare_columns if c not in source.columns]
+        missing_target = [c for c in compare_columns if c not in target.columns]
+        if missing_source or missing_target:
+            raise ValidationEngineError(
+                "compare_columns not present in both sides: "
+                f"missing_from_source={missing_source} missing_from_target={missing_target}"
+            )
+        return list(compare_columns)
+
+    common = [c for c in source.columns if c in set(target.columns)]
+    return [c for c in common if c not in key_columns and c not in ignore_columns]
+
+
+def _require_columns_present(
+    source: pd.DataFrame, target: pd.DataFrame, key_columns: list[str]
+) -> None:
+    missing_source = [c for c in key_columns if c not in source.columns]
+    missing_target = [c for c in key_columns if c not in target.columns]
+    if missing_source or missing_target:
+        raise ValidationEngineError(
+            "key_columns not present in both sides: "
+            f"missing_from_source={missing_source} missing_from_target={missing_target}"
+        )
+
+
+def _require_unique_index(frame: pd.DataFrame, label: str, key_columns: list[str]) -> None:
+    dupes = frame.index[frame.index.duplicated()]
+    if len(dupes) > 0:
+        raise ValidationEngineError(
+            f"key_columns {key_columns} are not unique in {label} "
+            f"({len(dupes)} duplicate key(s) found)"
+        )
+
+
+def _key_tuple(row: pd.Series, key_columns: list[str]) -> dict[str, object]:
+    return {col: _to_native(row[col]) for col in key_columns}
+
+
+def _sample_missing_rows(
+    frame: pd.DataFrame, keys: set, key_columns: list[str]
+) -> tuple[list[dict[str, object]], bool]:
+    ordered = sorted(keys, key=str)
+    truncated = len(ordered) > MAX_SAMPLE_ROWS
+    rows = []
+    for key in ordered[:MAX_SAMPLE_ROWS]:
+        row = frame.loc[key]
+        row = row.iloc[0] if isinstance(row, pd.DataFrame) else row
+        rows.append(_key_tuple(row, key_columns))
+    return rows, truncated
+
+
+def _column_mismatch_mask(
+    src_col: pd.Series, tgt_col: pd.Series, numeric_tolerance: float
+) -> pd.Series:
+    both_null = src_col.isna() & tgt_col.isna()
+    if pd.api.types.is_numeric_dtype(src_col) and pd.api.types.is_numeric_dtype(tgt_col):
+        either_null = src_col.isna() ^ tgt_col.isna()
+        diff = (src_col - tgt_col).abs()
+        return either_null | ((~both_null) & (diff > numeric_tolerance))
+    return ~(both_null | (src_col.astype(str) == tgt_col.astype(str)))
+
+
+def _diff_common_rows(
+    src_common: pd.DataFrame,
+    tgt_common: pd.DataFrame,
+    cols: list[str],
+    key_columns: list[str],
+    numeric_tolerance: float,
+) -> tuple[list[ColumnMismatch], int, int, bool]:
+    mismatches: list[ColumnMismatch] = []
+    mismatched_cell_count = 0
+    truncated = False
+    row_mismatch_mask = pd.Series(False, index=src_common.index)
+
+    for col in cols:
+        mask = _column_mismatch_mask(src_common[col], tgt_common[col], numeric_tolerance)
+        mismatched_cell_count += int(mask.sum())
+        row_mismatch_mask |= mask
+
+        for key in src_common.index[mask]:
+            row_src = src_common.loc[key]
+            row_tgt = tgt_common.loc[key]
+            if isinstance(row_src, pd.DataFrame):
+                row_src, row_tgt = row_src.iloc[0], row_tgt.iloc[0]
+            if len(mismatches) >= MAX_SAMPLE_ROWS:
+                truncated = True
+                continue
+            mismatches.append(
+                ColumnMismatch(
+                    key=_key_tuple(row_src, key_columns),
+                    column=col,
+                    source_value=_to_native(row_src[col]),
+                    target_value=_to_native(row_tgt[col]),
+                )
+            )
+
+    return mismatches, mismatched_cell_count, int(row_mismatch_mask.sum()), truncated
+
+
+def compare_dataframes(
+    source: pd.DataFrame,
+    target: pd.DataFrame,
+    key_columns: list[str],
+    compare_columns: list[str] | None = None,
+    ignore_columns: list[str] | None = None,
+    numeric_tolerance: float = 0.0,
+) -> ComparisonOutcome:
+    """Diff `source` against `target` by `key_columns`, returning a `ComparisonOutcome`."""
+    ignore_columns = ignore_columns or []
+    _require_columns_present(source, target, key_columns)
+    cols = _resolve_compare_columns(source, target, key_columns, compare_columns, ignore_columns)
+
+    src = source.set_index(key_columns, drop=False)
+    tgt = target.set_index(key_columns, drop=False)
+    _require_unique_index(src, "source", key_columns)
+    _require_unique_index(tgt, "target", key_columns)
+
+    src_keys, tgt_keys = set(src.index), set(tgt.index)
+    only_in_source = src_keys - tgt_keys
+    only_in_target = tgt_keys - src_keys
+    common_keys = src_keys & tgt_keys
+
+    missing_in_target, truncated_a = _sample_missing_rows(src, only_in_source, key_columns)
+    missing_in_source, truncated_b = _sample_missing_rows(tgt, only_in_target, key_columns)
+
+    mismatches: list[ColumnMismatch] = []
+    mismatched_row_count = 0
+    mismatched_cell_count = 0
+    truncated_c = False
+
+    if common_keys:
+        ordered_common = sorted(common_keys, key=str)
+        mismatches, mismatched_cell_count, mismatched_row_count, truncated_c = _diff_common_rows(
+            src.loc[ordered_common], tgt.loc[ordered_common], cols, key_columns, numeric_tolerance
+        )
+
+    summary = ComparisonSummary(
+        source_row_count=len(source),
+        target_row_count=len(target),
+        matched_row_count=len(common_keys) - mismatched_row_count,
+        missing_in_target_count=len(only_in_source),
+        missing_in_source_count=len(only_in_target),
+        mismatched_row_count=mismatched_row_count,
+        mismatched_cell_count=mismatched_cell_count,
+    )
+
+    return ComparisonOutcome(
+        summary=summary,
+        missing_in_target=missing_in_target,
+        missing_in_source=missing_in_source,
+        mismatches=mismatches,
+        truncated=truncated_a or truncated_b or truncated_c,
+    )

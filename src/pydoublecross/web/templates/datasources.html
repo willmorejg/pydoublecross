@@ -1,0 +1,46 @@
+<!--
+SPDX-FileCopyrightText: 2026 James G Willmore
+SPDX-License-Identifier: Apache-2.0
+-->
+{% extends "base.html" %}
+{% block title %}Data Sources - pyDoubleCross{% endblock %}
+{% block content %}
+  <h1>Data Sources</h1>
+  <p><a href="/datasources/new">+ New Data Source</a></p>
+
+  {% if not data_sources %}
+    <p>No data sources configured yet.</p>
+  {% else %}
+    <table class="data-table">
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>Type</th>
+          <th>Host / Path</th>
+          <th>Cache</th>
+          <th>Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for name, ds in data_sources.items() %}
+          <tr>
+            <td>{{ name }}</td>
+            <td>{{ ds.type }}</td>
+            <td>{{ ds.path or ds.host }}</td>
+            <td>{{ "enabled (" ~ ds.cache.ttl_seconds ~ "s)" if ds.cache.enabled else "disabled" }}</td>
+            <td class="actions">
+              <a href="/datasources/{{ name }}/edit">Edit</a>
+              <button type="button" hx-post="/api/datasources/{{ name }}/test"
+                      hx-target="#test-result-{{ loop.index }}" hx-swap="innerHTML">Test connection</button>
+              <span id="test-result-{{ loop.index }}"></span>
+              <form method="post" action="/datasources/{{ name }}/delete" style="display:inline"
+                    onsubmit="return confirm('Delete data source {{ name }}?');">
+                <button type="submit" class="danger">Delete</button>
+              </form>
+            </td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  {% endif %}
+{% endblock %}

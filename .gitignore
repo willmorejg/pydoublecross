@@ -1,0 +1,25 @@
+# Python-generated files
+__pycache__/
+*.py[oc]
+build/
+dist/
+wheels/
+*.egg-info
+
+# Virtual environments
+.venv
+
+# Docs build output
+site/
+
+# Test/coverage artifacts
+.coverage
+.pytest_cache/
+htmlcov/
+
+# Runtime data (cache/results dirs, local db files, exported reports)
+*.db
+*.duckdb
+*.xlsx
+examples/
+

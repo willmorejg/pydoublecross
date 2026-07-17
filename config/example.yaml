@@ -1,0 +1,147 @@
+# SPDX-FileCopyrightText: 2026 James G Willmore
+# SPDX-License-Identifier: Apache-2.0
+#
+# pyDoubleCross configuration
+#
+# Secrets should never be stored in plaintext here — reference an environment
+# variable instead with ${env:VAR_NAME}; it is substituted before parsing.
+#
+# Everything below `data_sources`/`validations` (excluding the commented-out
+# section at the end) is file-based (SQLite/DuckDB) and requires no external
+# server or credentials, so `pydoublecross validate-config -c config/example.yaml`
+# and `pydoublecross run customer_count_check -c config/example.yaml` work
+# out of the box — see docs/getting-started.md.
+
+app:
+  name: pyDoubleCross
+  cache_dir: ~/.pydoublecross/cache
+  results_dir: ~/.pydoublecross/results
+  log_level: INFO
+
+server:
+  # 127.0.0.1 = only reachable from this machine. Set to 0.0.0.0 to expose it
+  # on the network, and set server.api_key (or put it behind a reverse proxy)
+  # if you do.
+  host: 127.0.0.1
+  port: 8000
+  api_key: null
+
+data_sources:
+  # --- file-based, no server required, great for local testing ---
+  legacy_sqlite:
+    type: sqlite
+    path: ./examples/legacy.db
+    cache:
+      enabled: true
+      ttl_seconds: 3600
+
+  warehouse_duckdb:
+    type: duckdb
+    path: ./examples/warehouse.duckdb
+    cache:
+      enabled: false
+
+validations:
+  customer_count_check:
+    description: "Reconcile customer records between the legacy SQLite export and the DuckDB warehouse."
+    source:
+      data_source: legacy_sqlite
+      sql: "SELECT customer_id, name, email, status FROM customers"
+      # cache omitted here -> inherits legacy_sqlite's default (enabled, 1h TTL)
+    target:
+      data_source: warehouse_duckdb
+      table: dim_customers
+      cache:
+        enabled: false  # override: never cache the target side, even though
+                         # this data source's own default is cache-disabled anyway
+    key_columns: [customer_id]
+    compare_columns: [name, email, status]
+    numeric_tolerance: 0.0
+    expectations:
+      row_count_match: true
+      schema_match: true
+      null_checks: true
+
+# ---------------------------------------------------------------------------
+# Server-based examples (MS SQL Server / Azure SQL, PostgreSQL, MySQL, Oracle)
+# ---------------------------------------------------------------------------
+# These illustrate the full schema for every supported engine type but are
+# commented out because they point at placeholder hosts and require real
+# credentials via environment variables — uncomment and adapt, don't run as-is.
+# See docs/data-sources.md for driver/extra install notes per engine.
+#
+# data_sources:
+#   # on-prem / cloud SQL Server (Azure SQL Database is wire-compatible;
+#   # use type: azure_sql for it, same fields)
+#   crm_mssql:
+#     type: mssql
+#     host: crm-sql.internal.example.com
+#     port: 1433
+#     database: crm
+#     username: svc_pydoublecross
+#     password: ${env:CRM_MSSQL_PASSWORD}
+#     driver: "ODBC Driver 18 for SQL Server"
+#     extra_params:
+#       TrustServerCertificate: "yes"
+#     cache:
+#       enabled: true
+#       ttl_seconds: 1800
+#
+#   # PostgreSQL (Azure Database for PostgreSQL: same type, add sslmode)
+#   analytics_postgres:
+#     type: postgresql
+#     host: analytics-pg.internal.example.com
+#     port: 5432
+#     database: analytics
+#     username: svc_pydoublecross
+#     password: ${env:ANALYTICS_PG_PASSWORD}
+#     extra_params:
+#       sslmode: require
+#     cache:
+#       enabled: false
+#
+#   # MySQL (Azure Database for MySQL: same type, add ssl params)
+#   billing_mysql:
+#     type: mysql
+#     host: billing-mysql.internal.example.com
+#     port: 3306
+#     database: billing
+#     username: svc_pydoublecross
+#     password: ${env:BILLING_MYSQL_PASSWORD}
+#     cache:
+#       enabled: false
+#
+#   # Oracle
+#   erp_oracle:
+#     type: oracle
+#     host: erp-oracle.internal.example.com
+#     port: 1521
+#     database: ERPPROD
+#     username: svc_pydoublecross
+#     password: ${env:ERP_ORACLE_PASSWORD}
+#     cache:
+#       enabled: true
+#       ttl_seconds: 7200
+#
+# validations:
+#   crm_to_analytics_orders:
+#     description: "Reconcile order totals between CRM (source of truth) and the analytics warehouse."
+#     source:
+#       data_source: crm_mssql
+#       sql: "SELECT order_id, customer_id, total_amount, order_date FROM orders WHERE order_date >= '2026-01-01'"
+#       cache:
+#         force_refresh: false
+#     target:
+#       data_source: analytics_postgres
+#       sql: "SELECT order_id, customer_id, total_amount, order_date FROM fact_orders WHERE order_date >= '2026-01-01'"
+#       cache:
+#         enabled: true       # override: cache this one query even though
+#         ttl_seconds: 600    # analytics_postgres itself defaults to no caching
+#         force_refresh: false
+#     key_columns: [order_id]
+#     compare_columns: [customer_id, total_amount, order_date]
+#     numeric_tolerance: 0.01
+#     expectations:
+#       row_count_match: true
+#       schema_match: true
+#       null_checks: true

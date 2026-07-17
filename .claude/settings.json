@@ -1,0 +1,21 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(uv --version)",
+      "Bash(uv init *)",
+      "Bash(python3 -)",
+      "Bash(uv sync *)",
+      "Bash(uv run *)",
+      "Bash(export PYDOUBLECROSS_CONFIG_PATH=/tmp/claude-1000/-home-jim-development-python-pydoublecross/752cd474-c2b4-4c11-a96f-8d3e07e26a12/scratchpad/test_config.yaml)",
+      "Bash(echo \"PID: $!\")",
+      "Bash(curl -s -o /dev/null -w \"%{http_code}\\\\n\" http://127.0.0.1:8811/)",
+      "Bash(curl -s -o /dev/null -w \"%{http_code}\\\\n\" http://127.0.0.1:8811/api/health)",
+      "Bash(curl -s http://127.0.0.1:8811/api/health)",
+      "Bash(curl -s -i -X POST http://127.0.0.1:8811/datasources -d name=new_ds -d type=sqlite -d path=/tmp/claude-1000/-home-jim-development-python-pydoublecross/752cd474-c2b4-4c11-a96f-8d3e07e26a12/scratchpad/src.db -d cache_ttl_seconds=3600)",
+      "Bash(curl -s http://127.0.0.1:8811/api/datasources)",
+      "Bash(python3 -m json.tool)",
+      "Bash(curl -s -X POST http://127.0.0.1:8811/api/datasources/new_ds/test)",
+      "Bash(curl -s -i -X POST http://127.0.0.1:8811/datasources/new_ds/delete)"
+    ]
+  }
+}

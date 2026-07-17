@@ -1,0 +1,186 @@
+/*
+ SPDX-FileCopyrightText: 2026 James G Willmore
+ SPDX-License-Identifier: Apache-2.0
+*/
+
+:root {
+  --bg: #f7f8fa;
+  --panel-bg: #ffffff;
+  --border: #dde1e6;
+  --text: #1f2430;
+  --muted: #6b7280;
+  --accent: #2563eb;
+  --danger: #dc2626;
+  --pass: #16a34a;
+  --fail: #dc2626;
+  --error: #b91c1c;
+  --none: #9ca3af;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+}
+
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--text);
+}
+
+.topbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.75rem 1.5rem;
+  background: var(--panel-bg);
+  border-bottom: 1px solid var(--border);
+}
+
+.topbar .brand {
+  font-weight: 700;
+  font-size: 1.1rem;
+  color: var(--text);
+  text-decoration: none;
+}
+
+.topbar nav a {
+  margin-left: 1.25rem;
+  color: var(--accent);
+  text-decoration: none;
+  font-size: 0.9rem;
+}
+
+.content {
+  max-width: 1100px;
+  margin: 0 auto;
+  padding: 1.5rem;
+}
+
+h1 { font-size: 1.4rem; }
+h2 { font-size: 1.1rem; margin-top: 2rem; }
+
+.data-table {
+  width: 100%;
+  border-collapse: collapse;
+  background: var(--panel-bg);
+  border: 1px solid var(--border);
+  font-size: 0.9rem;
+}
+
+.data-table th, .data-table td {
+  padding: 0.5rem 0.75rem;
+  border-bottom: 1px solid var(--border);
+  text-align: left;
+}
+
+.data-table thead th {
+  background: #eef1f5;
+  font-weight: 600;
+}
+
+.actions a, .actions button {
+  margin-right: 0.5rem;
+}
+
+button {
+  cursor: pointer;
+  border: 1px solid var(--accent);
+  background: var(--accent);
+  color: white;
+  padding: 0.35rem 0.75rem;
+  border-radius: 4px;
+  font-size: 0.85rem;
+}
+
+button.danger {
+  border-color: var(--danger);
+  background: var(--danger);
+}
+
+form.panel, fieldset.panel, fieldset {
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 1rem;
+  background: var(--panel-bg);
+  margin-bottom: 1rem;
+}
+
+label {
+  display: block;
+  margin-bottom: 0.75rem;
+  font-size: 0.85rem;
+  color: var(--muted);
+}
+
+input, select, textarea {
+  display: block;
+  width: 100%;
+  margin-top: 0.25rem;
+  padding: 0.4rem 0.5rem;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  font-size: 0.9rem;
+  font-family: inherit;
+  color: var(--text);
+  background: white;
+}
+
+.columns {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1rem;
+}
+
+@media (max-width: 800px) {
+  .columns { grid-template-columns: 1fr; }
+}
+
+.cards {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  margin: 1rem 0;
+}
+
+.card {
+  background: var(--panel-bg);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 0.75rem 1rem;
+  min-width: 120px;
+  font-size: 0.8rem;
+  color: var(--muted);
+}
+
+.card span {
+  display: block;
+  font-size: 1.4rem;
+  font-weight: 700;
+  color: var(--text);
+}
+
+.status {
+  display: inline-block;
+  padding: 0.15rem 0.5rem;
+  border-radius: 999px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-decoration: none;
+  color: white;
+}
+
+.status-passed { background: var(--pass); }
+.status-failed { background: var(--fail); }
+.status-error { background: var(--error); }
+.status-none { background: var(--none); }
+
+.alert {
+  padding: 0.6rem 0.9rem;
+  border-radius: 4px;
+  font-size: 0.9rem;
+}
+
+.alert-error {
+  background: #fee2e2;
+  color: var(--error);
+  border: 1px solid #fecaca;
+}
