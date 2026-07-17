@@ -100,6 +100,14 @@ validations:
 #     cache:
 #       enabled: false
 #
+#   # ...or equivalently, as a single connection URL instead of individual
+#   # fields (url takes precedence over every field above if both are given):
+#   analytics_postgres_via_url:
+#     type: postgresql
+#     url: postgresql+psycopg://svc_pydoublecross:${env:ANALYTICS_PG_PASSWORD}@analytics-pg.internal.example.com:5432/analytics?sslmode=require
+#     cache:
+#       enabled: false
+#
 #   # MySQL (Azure Database for MySQL: same type, add ssl params)
 #   billing_mysql:
 #     type: mysql

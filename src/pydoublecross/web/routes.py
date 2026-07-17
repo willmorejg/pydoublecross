@@ -14,7 +14,6 @@ from fastapi.templating import Jinja2Templates
 
 from pydoublecross.api.deps import apply_config_change
 from pydoublecross.config.models import (
-    CacheDefaults,
     CacheOverride,
     DataSourceConfig,
     DataSourceRef,
@@ -85,30 +84,37 @@ def datasource_edit_form(request: Request, name: str) -> HTMLResponse:
     return templates.TemplateResponse(request, "datasource_form.html", {"name": name, "ds": ds})
 
 
-def _datasource_from_form(form: Any) -> DataSourceConfig:
-    return DataSourceConfig(
-        type=form["type"],
-        host=form.get("host") or None,
-        port=int(form["port"]) if form.get("port") else None,
-        database=form.get("database") or None,
-        username=form.get("username") or None,
-        password=form.get("password") or None,
-        path=form.get("path") or None,
-        driver=form.get("driver") or None,
-        extra_params=_parse_extra_params(str(form.get("extra_params", ""))),
-        cache=CacheDefaults(
-            enabled=form.get("cache_enabled") == "on",
-            ttl_seconds=int(form.get("cache_ttl_seconds") or 3600),
-        ),
-    )
+def _datasource_dict_from_form(form: Any) -> dict[str, Any]:
+    return {
+        "type": form["type"],
+        "url": form.get("url") or None,
+        "host": form.get("host") or None,
+        "port": int(form["port"]) if form.get("port") else None,
+        "database": form.get("database") or None,
+        "username": form.get("username") or None,
+        "password": form.get("password") or None,
+        "path": form.get("path") or None,
+        "driver": form.get("driver") or None,
+        "extra_params": _parse_extra_params(str(form.get("extra_params", ""))),
+        "cache": {
+            "enabled": form.get("cache_enabled") == "on",
+            "ttl_seconds": int(form.get("cache_ttl_seconds") or 3600),
+        },
+    }
 
 
 def _save_datasource(runner: ValidationRunner, name: str, form: Any) -> None:
-    config = _datasource_from_form(form)
-    if not form.get("password"):
-        existing = runner.config.data_sources.get(name)
-        if existing and existing.password:
-            config.password = existing.password
+    data = _datasource_dict_from_form(form)
+    existing = runner.config.data_sources.get(name)
+    # Blank password/url on an edit means "leave it as-is", not "clear it" - both
+    # fields may carry secrets we deliberately don't echo back to the form. This has
+    # to happen *before* DataSourceConfig validates, since e.g. a url-only sqlite
+    # data source has no 'path' and would otherwise fail validation on a blank url.
+    if not data["password"] and existing and existing.password:
+        data["password"] = existing.password
+    if not data["url"] and existing and existing.url:
+        data["url"] = existing.url
+    config = DataSourceConfig(**data)
 
     def mutate(data: dict[str, Any]) -> None:
         data["data_sources"][name] = config.model_dump(mode="json")

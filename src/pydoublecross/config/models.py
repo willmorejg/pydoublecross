@@ -9,6 +9,8 @@ from pathlib import Path
 from typing import Literal
 
 from pydantic import BaseModel, Field, model_validator
+from sqlalchemy.engine import make_url
+from sqlalchemy.exc import ArgumentError
 
 DataSourceType = Literal[
     "mssql",
@@ -56,9 +58,16 @@ class ResolvedCacheOptions(BaseModel):
 
 
 class DataSourceConfig(BaseModel):
-    """A named, reusable connection definition."""
+    """A named, reusable connection definition.
+
+    Either provide `url` (a full SQLAlchemy connection URL, e.g.
+    ``postgresql+psycopg://user:pass@host:5432/dbname``) or the individual
+    `host`/`port`/`database`/`username`/`password`/`path` fields — not both need
+    be fully specified, but `url` always takes precedence when present.
+    """
 
     type: DataSourceType
+    url: str | None = None  # raw SQLAlchemy URL; overrides the individual fields below
     host: str | None = None
     port: int | None = None
     database: str | None = None
@@ -71,11 +80,18 @@ class DataSourceConfig(BaseModel):
 
     @model_validator(mode="after")
     def _check_location(self) -> DataSourceConfig:
+        if self.url:
+            try:
+                make_url(self.url)
+            except ArgumentError as exc:
+                raise ValueError(f"invalid 'url': {exc}") from exc
+            return self
+
         file_based = self.type in ("sqlite", "duckdb")
         if file_based and not self.path:
-            raise ValueError(f"data source of type '{self.type}' requires 'path'")
+            raise ValueError(f"data source of type '{self.type}' requires 'path' (or 'url')")
         if not file_based and not self.host:
-            raise ValueError(f"data source of type '{self.type}' requires 'host'")
+            raise ValueError(f"data source of type '{self.type}' requires 'host' (or 'url')")
         return self
 
 

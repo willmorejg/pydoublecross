@@ -12,6 +12,7 @@ class DataSourceSummary(BaseModel):
     name: str
     type: str
     cache_enabled: bool
+    uses_url: bool
 
 
 class ValidationItemSummary(BaseModel):

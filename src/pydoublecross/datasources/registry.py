@@ -10,7 +10,7 @@ URL shape each `type` needs.
 
 from __future__ import annotations
 
-from sqlalchemy.engine import URL
+from sqlalchemy.engine import URL, make_url
 
 from pydoublecross.config.models import DataSourceConfig
 from pydoublecross.exceptions import DataSourceError
@@ -45,7 +45,14 @@ _DEFAULT_PORT = {
 
 
 def build_url(config: DataSourceConfig) -> URL:
-    """Build a SQLAlchemy URL for a data source configuration."""
+    """Build a SQLAlchemy URL for a data source configuration.
+
+    If `config.url` is set, it is used as-is (already validated as parseable
+    when the config was loaded) and every individual field below is ignored.
+    """
+    if config.url:
+        return make_url(config.url)
+
     try:
         drivername = _DRIVERNAME[config.type]
     except KeyError as exc:

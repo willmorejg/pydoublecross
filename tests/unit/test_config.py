@@ -83,6 +83,43 @@ def test_datasource_requires_host_for_server_based() -> None:
         DataSourceConfig(type="postgresql")
 
 
+def test_datasource_url_bypasses_host_and_path_requirements() -> None:
+    # Neither 'path' (sqlite) nor 'host' (postgresql) is required when 'url' is set.
+    sqlite_ds = DataSourceConfig(type="sqlite", url="sqlite:///:memory:")
+    assert sqlite_ds.path is None
+
+    pg_ds = DataSourceConfig(type="postgresql", url="postgresql+psycopg://u:p@h:5432/d")
+    assert pg_ds.host is None
+
+
+def test_datasource_invalid_url_raises() -> None:
+    with pytest.raises(ValueError, match="invalid 'url'"):
+        DataSourceConfig(type="postgresql", url="not a valid sqlalchemy url::::")
+
+
+def test_datasource_url_supports_env_interpolation(tmp_path: Path) -> None:
+    import os
+
+    os.environ["PDC_TEST_URL_PASSWORD"] = "s3cret"
+    try:
+        data = {
+            "data_sources": {
+                "pg": {
+                    "type": "postgresql",
+                    "url": "postgresql+psycopg://u:${env:PDC_TEST_URL_PASSWORD}@h:5432/d",
+                }
+            }
+        }
+        path = tmp_path / "url_env.yaml"
+        path.write_text(yaml.safe_dump(data), encoding="utf-8")
+        config = load_config(path)
+        url = config.data_sources["pg"].url
+        assert url is not None
+        assert "s3cret" in url
+    finally:
+        del os.environ["PDC_TEST_URL_PASSWORD"]
+
+
 def test_datasource_ref_requires_exactly_one_of_sql_or_table() -> None:
     with pytest.raises(ValueError, match="exactly one"):
         DataSourceRef(data_source="src", sql="SELECT 1", table="t")

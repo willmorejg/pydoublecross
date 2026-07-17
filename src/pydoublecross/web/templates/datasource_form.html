@@ -23,14 +23,26 @@ SPDX-License-Identifier: Apache-2.0
     </label>
 
     <fieldset>
-      <legend>File-based (SQLite / DuckDB)</legend>
+      <legend>Connection URL (optional — takes precedence over every field below if set)</legend>
+      <label>SQLAlchemy URL
+        <input type="text" name="url"
+               placeholder="{{ '(unchanged)' if ds and ds.url else 'e.g. postgresql+psycopg://user:pass@host:5432/dbname' }}">
+      </label>
+      <p class="hint">
+        Use this instead of the individual connection fields below, e.g. when you already have a
+        connection string. Leave blank on edit to keep the existing one unchanged.
+      </p>
+    </fieldset>
+
+    <fieldset>
+      <legend>File-based (SQLite / DuckDB) — ignored if a Connection URL is set</legend>
       <label>Path
         <input type="text" name="path" value="{{ ds.path if ds else '' }}" placeholder="./examples/warehouse.duckdb">
       </label>
     </fieldset>
 
     <fieldset>
-      <legend>Server-based (MSSQL / Azure SQL / PostgreSQL / MySQL / Oracle)</legend>
+      <legend>Server-based (MSSQL / Azure SQL / PostgreSQL / MySQL / Oracle) — ignored if a Connection URL is set</legend>
       <label>Host
         <input type="text" name="host" value="{{ ds.host if ds else '' }}">
       </label>

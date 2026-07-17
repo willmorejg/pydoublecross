@@ -22,6 +22,8 @@ def _public(name: str, config: DataSourceConfig) -> dict[str, Any]:
     data = config.model_dump(mode="json")
     if data.get("password"):
         data["password"] = "***"
+    if data.get("url"):
+        data["url"] = "***"  # may embed credentials, e.g. postgresql://user:pass@host/db
     data["name"] = name
     return data
 
@@ -29,7 +31,9 @@ def _public(name: str, config: DataSourceConfig) -> dict[str, Any]:
 @router.get("", response_model=list[DataSourceSummary])
 def list_datasources(runner: Annotated[ValidationRunner, Depends(get_runner)]):
     return [
-        DataSourceSummary(name=name, type=ds.type, cache_enabled=ds.cache.enabled)
+        DataSourceSummary(
+            name=name, type=ds.type, cache_enabled=ds.cache.enabled, uses_url=bool(ds.url)
+        )
         for name, ds in runner.config.data_sources.items()
     ]
 

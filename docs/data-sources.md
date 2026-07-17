@@ -14,6 +14,31 @@ connection URL is built (`pydoublecross.datasources.registry`).
 | `mysql`        | `pymysql`                 | `pydoublecross[mysql]`          | also used for Azure Database for MySQL |
 | `oracle`       | `oracledb` (thin mode)    | `pydoublecross[oracle]`         | no Oracle client install needed |
 
+## Two ways to configure a connection
+
+Every `data_sources` entry can be defined either way — pick whichever is more convenient per
+entry, there's no need to be consistent across the file:
+
+1. **Individual fields**: `host`, `port`, `database`, `username`, `password`, `path`, `driver`,
+   `extra_params` — pyDoubleCross builds the SQLAlchemy URL for you based on `type` (see the
+   examples below).
+2. **A raw `url`**: a full SQLAlchemy connection URL, e.g.
+   `postgresql+psycopg://user:pass@host:5432/dbname`. If `url` is set, it's used exactly as
+   given and every individual field is ignored — `type` is still required (it's used for the
+   cache directory layout and the web UI's dropdown), but doesn't need to structurally match the
+   URL's own dialect.
+
+```yaml
+data_sources:
+  warehouse_via_url:
+    type: postgresql
+    url: postgresql+psycopg://svc_pydoublecross:${env:WAREHOUSE_PG_PASSWORD}@warehouse-pg.internal.example.com:5432/warehouse
+```
+
+Like every other string field, `url` supports `${env:VAR_NAME}` interpolation — so a password
+embedded in the URL still doesn't need to be committed in plaintext. If `url` fails to parse as a
+SQLAlchemy URL, `validate-config` catches it at load time rather than at connection time.
+
 ## File-based (`sqlite`, `duckdb`)
 
 ```yaml

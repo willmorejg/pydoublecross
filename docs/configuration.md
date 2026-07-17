@@ -35,8 +35,10 @@ load with a clear error rather than connecting with a literal `${env:...}` strin
 
 ## Data sources
 
-Each entry under `data_sources` is a named, reusable connection. See [Data Sources](data-sources.md)
-for the fields each `type` needs, and [Caching](caching.md) for the `cache` block.
+Each entry under `data_sources` is a named, reusable connection, configured either with individual
+fields (`host`/`port`/`database`/`username`/`password`/`path`) or a single raw `url` (a full
+SQLAlchemy connection URL) — see [Data Sources](data-sources.md) for both forms and what each
+`type` needs, and [Caching](caching.md) for the `cache` block.
 
 ## Validation items
 

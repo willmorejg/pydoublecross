@@ -57,3 +57,26 @@ def test_missing_driver_hint_for_oracle() -> None:
 def test_missing_driver_hint_none_for_sqlite() -> None:
     config = DataSourceConfig(type="sqlite", path="/tmp/foo.db")
     assert missing_driver_hint(config) is None
+
+
+def test_raw_url_takes_precedence_over_individual_fields() -> None:
+    config = DataSourceConfig(
+        type="postgresql",
+        url="postgresql+psycopg://alice:secret@pg.example.com:5433/analytics?sslmode=require",
+        host="ignored.example.com",
+        username="ignored",
+    )
+    url = build_url(config)
+    assert url.drivername == "postgresql+psycopg"
+    assert url.host == "pg.example.com"
+    assert url.port == 5433
+    assert url.username == "alice"
+    assert url.database == "analytics"
+    assert url.query["sslmode"] == "require"
+
+
+def test_raw_url_for_sqlite_bypasses_path_requirement() -> None:
+    config = DataSourceConfig(type="sqlite", url="sqlite:////tmp/foo.db")
+    url = build_url(config)
+    assert url.drivername == "sqlite"
+    assert url.database == "/tmp/foo.db"

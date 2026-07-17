@@ -97,6 +97,27 @@ def test_datasource_upsert_and_delete(client: TestClient, tmp_path) -> None:
     assert resp.status_code == 404
 
 
+def test_datasource_via_url_is_masked_in_responses(client: TestClient, tmp_path) -> None:
+    db_path = tmp_path / "via_url.db"
+    db_path.touch()
+    payload = {
+        "type": "sqlite",
+        "url": f"sqlite:///{db_path}",
+        "cache": {"enabled": False},
+    }
+    resp = client.put("/api/datasources/via_url", json=payload)
+    assert resp.status_code == 200
+    assert resp.json()["url"] == "***"
+
+    resp = client.get("/api/datasources/via_url")
+    assert resp.status_code == 200
+    assert resp.json()["url"] == "***"
+
+    resp = client.get("/api/datasources")
+    entry = next(ds for ds in resp.json() if ds["name"] == "via_url")
+    assert entry["uses_url"] is True
+
+
 def test_validation_item_update_persists(client: TestClient) -> None:
     resp = client.get("/api/validations/customer_check")
     item = resp.json()
@@ -133,6 +154,36 @@ def test_web_validation_new_form_renders(client: TestClient) -> None:
 def test_web_validation_edit_form_renders(client: TestClient) -> None:
     resp = client.get("/validations/customer_check/edit")
     assert resp.status_code == 200
+
+
+def test_web_datasource_url_create_and_preserve_on_edit(client: TestClient, tmp_path) -> None:
+    db_path = tmp_path / "web_via_url.db"
+    db_path.touch()
+
+    create_resp = client.post(
+        "/datasources",
+        data={
+            "name": "web_via_url",
+            "type": "sqlite",
+            "url": f"sqlite:///{db_path}",
+        },
+        follow_redirects=False,
+    )
+    assert create_resp.status_code == 303
+
+    resp = client.get("/api/datasources/web_via_url")
+    assert resp.json()["url"] == "***"
+
+    # Re-save via the web form without retyping the url - it must survive unchanged.
+    edit_resp = client.post(
+        "/datasources/web_via_url",
+        data={"type": "sqlite", "cache_ttl_seconds": "60"},
+        follow_redirects=False,
+    )
+    assert edit_resp.status_code == 303
+
+    resp = client.get("/api/datasources/web_via_url")
+    assert resp.json()["url"] == "***"
 
 
 def test_web_run_then_view_result(client: TestClient) -> None:
