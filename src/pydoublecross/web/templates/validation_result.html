@@ -4,6 +4,28 @@ SPDX-License-Identifier: Apache-2.0
 -->
 {% extends "base.html" %}
 {% block title %}Result - {{ item_name }} - pyDoubleCross{% endblock %}
+
+{% macro key_rows_table(rows) %}
+  {% if rows %}
+    <table class="data-table">
+      <thead>
+        <tr>
+          {% for col in rows[0].keys() %}<th>{{ col }}</th>{% endfor %}
+        </tr>
+      </thead>
+      <tbody>
+        {% for row in rows %}
+          <tr>
+            {% for col in rows[0].keys() %}<td>{{ row[col] }}</td>{% endfor %}
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  {% else %}
+    <p>None.</p>
+  {% endif %}
+{% endmacro %}
+
 {% block content %}
   {% if not result %}
     <p class="alert alert-error">No such result.</p>
@@ -69,21 +91,9 @@ SPDX-License-Identifier: Apache-2.0
     </table>
 
     <h2>Missing in Target ({{ result.missing_in_target | length }})</h2>
-    <table class="data-table">
-      <tbody>
-        {% for row in result.missing_in_target %}
-          <tr><td>{{ row }}</td></tr>
-        {% endfor %}
-      </tbody>
-    </table>
+    {{ key_rows_table(result.missing_in_target) }}
 
     <h2>Missing in Source ({{ result.missing_in_source | length }})</h2>
-    <table class="data-table">
-      <tbody>
-        {% for row in result.missing_in_source %}
-          <tr><td>{{ row }}</td></tr>
-        {% endfor %}
-      </tbody>
-    </table>
+    {{ key_rows_table(result.missing_in_source) }}
   {% endif %}
 {% endblock %}
