@@ -41,9 +41,43 @@ behavior belongs there or in the module it orchestrates, not duplicated per fron
 
 ## Versioning
 
-CalVer: `YYYY.MM.MICRO` (e.g. `2026.7.1`), tracked in `src/pydoublecross/__init__.py` and read by
-Hatch via `[tool.hatch.version] path = "src/pydoublecross/__init__.py"`. Bump `MICRO` within a
-month; start a new `MICRO` sequence at `1` when the month changes.
+CalVer + git hash: `YYYY.MM.MICRO+<7-char-sha>` (e.g. `2026.7.2+a1b2c3d`) — a
+[PEP 440 local version identifier](https://peps.python.org/pep-0440/#local-version-identifiers),
+so it's a normal, pip-installable version string. `MICRO` increments within a month and resets to
+`1` when the year/month changes; the `+<sha>` suffix pins the exact commit a given build/release
+came from.
+
+`__version__` in `src/pydoublecross/__init__.py` is the single source of truth — `pyproject.toml`
+declares `dynamic = ["version"]` and Hatch reads it from there via
+`[tool.hatch.version] path = "src/pydoublecross/__init__.py"`. Don't hardcode a `version` in
+`[project]` alongside that; hatchling silently ignores `[tool.hatch.version]` if it finds one.
+
+`scripts/bump_version.py` computes and writes the next version (see
+[Releasing](#releasing) — you generally shouldn't need to run it by hand, the release workflow
+does it):
+
+```bash
+uv run python scripts/bump_version.py            # bump and write __init__.py, print new version
+uv run python scripts/bump_version.py --dry-run  # just print what it would bump to
+```
+
+## Releasing
+
+`.github/workflows/release.yml` runs on every push to `master` (i.e. every merge) and, in order:
+
+1. Runs the full test suite — a failing test blocks the release.
+2. Bumps the version (`scripts/bump_version.py`, using the triggering commit's SHA) and commits
+   that change straight to `master`, tagged `v<version>`.
+3. Builds the sdist/wheel (`uv build`).
+4. Creates a GitHub Release for that tag with the build artifacts attached and auto-generated
+   release notes.
+
+The bump commit is pushed using the workflow's own `GITHUB_TOKEN`, which GitHub deliberately
+excludes from re-triggering `on: push` workflows — so it doesn't loop.
+
+**Caveat:** this pushes directly to `master`. If branch protection rules block direct pushes
+(e.g. "require a pull request before merging"), you'll need to either allow GitHub Actions to
+bypass that rule for this workflow, or switch this step to open a PR instead.
 
 ## Building the docs
 
@@ -55,7 +89,7 @@ uv run mkdocs build   # static site in site/
 ### Publishing to GitHub Pages
 
 `.github/workflows/docs.yml` builds the docs with `mkdocs build --strict` and deploys them to
-GitHub Pages on every push to `main` (or via manual `workflow_dispatch`) — no `gh-pages` branch
+GitHub Pages on every push to `master` (or via manual `workflow_dispatch`) — no `gh-pages` branch
 involved, it uses GitHub's native Actions-based Pages deployment.
 
 One-time repo setup required before the first run: **Settings → Pages → Build and deployment →

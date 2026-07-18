@@ -44,7 +44,9 @@ uv run ty check
 uv run pytest
 ```
 
-Versioning follows CalVer: `YYYY.MM.MICRO`.
+Versioning is CalVer + git hash: `YYYY.MM.MICRO+<sha>` (e.g. `2026.7.2+a1b2c3d`), bumped and
+released automatically on every merge to `master` — see
+[Versioning](docs/development.md#versioning) and [Releasing](docs/development.md#releasing).
 
 ## License
 
