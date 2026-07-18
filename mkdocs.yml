@@ -4,6 +4,8 @@ repo_url: https://github.com/willmorejg/pydoublecross
 
 theme:
   name: material
+  favicon: assets/favicon.ico
+  logo: assets/logo.png
   palette:
     - media: "(prefers-color-scheme: light)"
       scheme: default

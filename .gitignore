@@ -23,3 +23,7 @@ htmlcov/
 *.xlsx
 examples/
 
+# Favicon generator source archive - the icons it contains are already
+# extracted into src/pydoublecross/web/static/favicon/ and docs/assets/
+favicon_io.zip
+

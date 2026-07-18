@@ -36,10 +36,18 @@ body {
 }
 
 .topbar .brand {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
   font-weight: 700;
   font-size: 1.1rem;
   color: var(--text);
   text-decoration: none;
+}
+
+.topbar .brand img {
+  display: block;
+  border-radius: 4px;
 }
 
 .topbar nav a {

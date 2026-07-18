@@ -1,3 +1,7 @@
+<p align="center">
+  <img src="src/pydoublecross/web/static/favicon/apple-touch-icon.png" width="96" height="96" alt="pyDoubleCross logo">
+</p>
+
 # pyDoubleCross
 
 Validate data consistency between a source and a target data source (MS SQL Server, Azure SQL,
