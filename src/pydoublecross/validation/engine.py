@@ -13,7 +13,7 @@ from pydoublecross.cache.manager import CacheManager
 from pydoublecross.config.models import AppConfig, DataSourceRef, ValidationItemConfig
 from pydoublecross.datasources.factory import DataSourceFactory
 from pydoublecross.exceptions import ValidationEngineError
-from pydoublecross.logging_conf import get_logger
+from pydoublecross.logging_conf import get_logger, sanitize_for_log
 from pydoublecross.validation.comparators import compare_dataframes
 from pydoublecross.validation.ge_suite import run_side_expectations
 from pydoublecross.validation.results import RunStatus, ValidationRunResult
@@ -21,6 +21,15 @@ from pydoublecross.validation.results import RunStatus, ValidationRunResult
 logger = get_logger(__name__)
 
 CacheMode = Literal["default", "bypass", "refresh"]
+
+
+def resolve_cache_mode(no_cache: bool, refresh_cache: bool) -> CacheMode:
+    """Map the CLI's/API's `--no-cache`/`--refresh-cache` flags to a `CacheMode`."""
+    if refresh_cache:
+        return "refresh"
+    if no_cache:
+        return "bypass"
+    return "default"
 
 
 class ValidationEngine:
@@ -62,12 +71,13 @@ class ValidationEngine:
 
         run_id = uuid.uuid4().hex
         started_at = datetime.now(UTC)
-        logger.info("running validation '%s' (run_id=%s)", item_name, run_id)
+        safe_item_name = sanitize_for_log(item_name)
+        logger.info("running validation '%s' (run_id=%s)", safe_item_name, run_id)
 
         try:
             return self._run_item(item_name, item, run_id, started_at, cache_mode)
         except ValidationEngineError as exc:
-            logger.exception("validation '%s' failed", item_name)
+            logger.exception("validation '%s' failed", safe_item_name)
             return ValidationRunResult(
                 item_name=item_name,
                 run_id=run_id,
