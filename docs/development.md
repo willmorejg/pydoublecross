@@ -52,6 +52,16 @@ uv run mkdocs serve   # live-reloading local preview
 uv run mkdocs build   # static site in site/
 ```
 
+### Publishing to GitHub Pages
+
+`.github/workflows/docs.yml` builds the docs with `mkdocs build --strict` and deploys them to
+GitHub Pages on every push to `main` (or via manual `workflow_dispatch`) — no `gh-pages` branch
+involved, it uses GitHub's native Actions-based Pages deployment.
+
+One-time repo setup required before the first run: **Settings → Pages → Build and deployment →
+Source: "GitHub Actions"**. Once that's set, the published site's URL shows up as the `deploy`
+job's environment URL in the workflow run summary.
+
 ## License and provenance
 
 The project is licensed under [Apache License 2.0](license.md); every source file carries an
