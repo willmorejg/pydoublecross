@@ -32,3 +32,8 @@ def configure_logging(level: str = "INFO") -> None:
 
 def get_logger(name: str) -> logging.Logger:
     return logging.getLogger(name)
+
+
+def sanitize_for_log(value: str) -> str:
+    """Strip CR/LF from user-controlled values before logging, to prevent log injection."""
+    return value.replace("\r", "").replace("\n", "")

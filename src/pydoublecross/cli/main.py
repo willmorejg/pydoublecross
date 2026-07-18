@@ -16,7 +16,7 @@ from pydoublecross import __version__
 from pydoublecross.core.runner import ValidationRunner
 from pydoublecross.exceptions import PyDoubleCrossError
 from pydoublecross.logging_conf import configure_logging
-from pydoublecross.validation.engine import CacheMode
+from pydoublecross.validation.engine import resolve_cache_mode
 from pydoublecross.validation.results import RunStatus
 
 app = typer.Typer(
@@ -35,14 +35,6 @@ ConfigOption = Annotated[
     Path,
     typer.Option("--config", "-c", help="Path to the YAML configuration file."),
 ]
-
-
-def _cache_mode(no_cache: bool, refresh_cache: bool) -> CacheMode:
-    if refresh_cache:
-        return "refresh"
-    if no_cache:
-        return "bypass"
-    return "default"
 
 
 def _load_runner(config: Path) -> ValidationRunner:
@@ -126,7 +118,7 @@ def run(
 ) -> None:
     """Run one validation item."""
     runner = _load_runner(config)
-    cache_mode = _cache_mode(no_cache, refresh_cache)
+    cache_mode = resolve_cache_mode(no_cache, refresh_cache)
     try:
         result = runner.run(item_name, cache_mode=cache_mode)
     except PyDoubleCrossError as exc:
@@ -154,7 +146,7 @@ def run_all(
 ) -> None:
     """Run every configured validation item."""
     runner = _load_runner(config)
-    cache_mode = _cache_mode(no_cache, refresh_cache)
+    cache_mode = resolve_cache_mode(no_cache, refresh_cache)
     results = runner.run_all(cache_mode=cache_mode)
     failures = 0
     for result in results:

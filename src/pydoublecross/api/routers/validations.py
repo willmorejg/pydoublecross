@@ -14,6 +14,7 @@ from pydoublecross.api.schemas import ValidationItemSummary
 from pydoublecross.config.models import ValidationItemConfig
 from pydoublecross.core.runner import ValidationRunner
 from pydoublecross.exceptions import PyDoubleCrossError
+from pydoublecross.validation.engine import resolve_cache_mode
 from pydoublecross.validation.results import ValidationRunResult
 
 router = APIRouter(prefix="/api/validations", tags=["validations"])
@@ -24,7 +25,11 @@ def list_validations(runner: Annotated[ValidationRunner, Depends(get_runner)]):
     return [ValidationItemSummary(**item) for item in runner.list_items()]
 
 
-@router.get("/{name}", response_model=ValidationItemConfig)
+@router.get(
+    "/{name}",
+    response_model=ValidationItemConfig,
+    responses={404: {"description": "Unknown validation item"}},
+)
 def get_validation(name: str, runner: Annotated[ValidationRunner, Depends(get_runner)]):
     item = runner.config.validations.get(name)
     if item is None:
@@ -32,7 +37,11 @@ def get_validation(name: str, runner: Annotated[ValidationRunner, Depends(get_ru
     return item
 
 
-@router.put("/{name}", response_model=ValidationItemConfig)
+@router.put(
+    "/{name}",
+    response_model=ValidationItemConfig,
+    responses={422: {"description": "Resulting configuration is invalid"}},
+)
 def upsert_validation(
     name: str,
     payload: ValidationItemConfig,
@@ -45,7 +54,13 @@ def upsert_validation(
     return runner.config.validations[name]
 
 
-@router.delete("/{name}")
+@router.delete(
+    "/{name}",
+    responses={
+        404: {"description": "Unknown validation item"},
+        422: {"description": "Resulting configuration is invalid"},
+    },
+)
 def delete_validation(name: str, runner: Annotated[ValidationRunner, Depends(get_runner)]):
     if name not in runner.config.validations:
         raise HTTPException(status_code=404, detail=f"unknown validation item '{name}'")
@@ -57,7 +72,14 @@ def delete_validation(name: str, runner: Annotated[ValidationRunner, Depends(get
     return {"detail": f"validation item '{name}' deleted"}
 
 
-@router.post("/{name}/run", response_model=ValidationRunResult)
+@router.post(
+    "/{name}/run",
+    response_model=ValidationRunResult,
+    responses={
+        400: {"description": "The run failed"},
+        404: {"description": "Unknown validation item"},
+    },
+)
 def run_validation(
     name: str,
     runner: Annotated[ValidationRunner, Depends(get_runner)],
@@ -66,7 +88,7 @@ def run_validation(
 ):
     if name not in runner.config.validations:
         raise HTTPException(status_code=404, detail=f"unknown validation item '{name}'")
-    cache_mode = "refresh" if refresh_cache else "bypass" if no_cache else "default"
+    cache_mode = resolve_cache_mode(no_cache, refresh_cache)
     try:
         return runner.run(name, cache_mode=cache_mode)
     except PyDoubleCrossError as exc:
@@ -82,7 +104,11 @@ def list_results(
     return runner.history(name, limit=limit)
 
 
-@router.get("/{name}/results/{run_id}", response_model=ValidationRunResult)
+@router.get(
+    "/{name}/results/{run_id}",
+    response_model=ValidationRunResult,
+    responses={404: {"description": "No such run result"}},
+)
 def get_result(name: str, run_id: str, runner: Annotated[ValidationRunner, Depends(get_runner)]):
     result = runner.get_result(name, run_id)
     if result is None:
