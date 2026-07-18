@@ -7,8 +7,8 @@ on:
   push:
     branches: [master]
 
-# No workflow-level permissions: the job below declares only what it needs.
-permissions: {}
+permissions:
+  contents: write
 
 # One release at a time; queue (don't cancel) any run that lands mid-release.
 concurrency:

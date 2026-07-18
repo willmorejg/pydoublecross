@@ -1,6 +1,6 @@
 [project]
 name = "pydoublecross"
-version = "2026.7.1"
+dynamic = ["version"]
 description = "Validate data consistency between two data sources (RDBMS today, S3/Iceberg/Databricks planned) using Great Expectations, with CLI, REST API, and web UI front ends."
 readme = "README.md"
 authors = [
@@ -105,12 +105,13 @@ known-first-party = ["pydoublecross"]
 
 [tool.ty.environment]
 python-version = "3.12"
-root = ["src"]
+root = ["src", "scripts"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 addopts = "--cov=pydoublecross --cov-report=term-missing"
 asyncio_mode = "auto"
+pythonpath = ["scripts"]
 
 [tool.coverage.run]
 source = ["src/pydoublecross"]

@@ -1345,7 +1345,6 @@ wheels = [
 
 [[package]]
 name = "pydoublecross"
-version = "2026.7.1"
 source = { editable = "." }
 dependencies = [
     { name = "fastapi" },
@@ -1432,7 +1431,7 @@ requires-dist = [
     { name = "typer", specifier = ">=0.13" },
     { name = "uvicorn", extras = ["standard"], specifier = ">=0.32" },
 ]
-provides-extras = ["mssql", "postgres", "mysql", "oracle", "duckdb", "all"]
+provides-extras = ["all", "duckdb", "mssql", "mysql", "oracle", "postgres"]
 
 [package.metadata.requires-dev]
 dev = [
