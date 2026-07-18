@@ -125,7 +125,7 @@ def test_validation_item_update_persists(client: TestClient) -> None:
 
     resp = client.put("/api/validations/customer_check", json=item)
     assert resp.status_code == 200
-    assert resp.json()["numeric_tolerance"] == 0.5
+    assert resp.json()["numeric_tolerance"] == pytest.approx(0.5)
 
 
 def test_cache_clear_endpoint(client: TestClient) -> None:

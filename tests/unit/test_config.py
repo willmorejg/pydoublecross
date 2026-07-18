@@ -100,7 +100,9 @@ def test_datasource_invalid_url_raises() -> None:
 def test_datasource_url_supports_env_interpolation(tmp_path: Path) -> None:
     import os
 
-    os.environ["PDC_TEST_URL_PASSWORD"] = "s3cret"
+    os.environ["PDC_TEST_URL_PASSWORD"] = (
+        "s3cret"  # NOSONAR - dummy value, only used to prove ${env:...} interpolation works
+    )
     try:
         data = {
             "data_sources": {

@@ -8,14 +8,14 @@ from pydoublecross.datasources.registry import build_url, missing_driver_hint
 
 
 def test_sqlite_url() -> None:
-    config = DataSourceConfig(type="sqlite", path="/tmp/foo.db")
+    config = DataSourceConfig(type="sqlite", path="/opt/pydoublecross/foo.db")
     url = build_url(config)
     assert url.drivername == "sqlite"
-    assert url.database == "/tmp/foo.db"
+    assert url.database == "/opt/pydoublecross/foo.db"
 
 
 def test_duckdb_url() -> None:
-    config = DataSourceConfig(type="duckdb", path="/tmp/foo.duckdb")
+    config = DataSourceConfig(type="duckdb", path="/opt/pydoublecross/foo.duckdb")
     url = build_url(config)
     assert url.drivername == "duckdb"
 
@@ -55,7 +55,7 @@ def test_missing_driver_hint_for_oracle() -> None:
 
 
 def test_missing_driver_hint_none_for_sqlite() -> None:
-    config = DataSourceConfig(type="sqlite", path="/tmp/foo.db")
+    config = DataSourceConfig(type="sqlite", path="/opt/pydoublecross/foo.db")
     assert missing_driver_hint(config) is None
 
 
@@ -76,7 +76,7 @@ def test_raw_url_takes_precedence_over_individual_fields() -> None:
 
 
 def test_raw_url_for_sqlite_bypasses_path_requirement() -> None:
-    config = DataSourceConfig(type="sqlite", url="sqlite:////tmp/foo.db")
+    config = DataSourceConfig(type="sqlite", url="sqlite:////opt/pydoublecross/foo.db")
     url = build_url(config)
     assert url.drivername == "sqlite"
-    assert url.database == "/tmp/foo.db"
+    assert url.database == "/opt/pydoublecross/foo.db"
