@@ -27,3 +27,5 @@ examples/
 # extracted into src/pydoublecross/web/static/favicon/ and docs/assets/
 favicon_io.zip
 
+sonarqube-issues/*
+
