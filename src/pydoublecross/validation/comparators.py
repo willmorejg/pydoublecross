@@ -10,6 +10,8 @@ each other. Cross-source row and value comparison lives here instead.
 
 from __future__ import annotations
 
+from decimal import Decimal, InvalidOperation
+
 import numpy as np
 import pandas as pd
 
@@ -29,6 +31,47 @@ def _to_native(value: object) -> object:
     if value is None or (isinstance(value, float) and pd.isna(value)):
         return None
     return value
+
+
+def _normalize_key_value(value: object) -> object:
+    """Canonicalize one key value for row-matching, independent of its source dtype.
+
+    Different databases/drivers routinely return "the same" key as different Python
+    types - int vs numpy.int64 vs Decimal vs a numeric string, or a CHAR column
+    padded with trailing spaces vs an unpadded VARCHAR. Matching those with strict
+    `==`/hashing (as a plain `set_index` would) makes every such row look "missing"
+    on both sides. Numbers are normalized via `Decimal` (exact, no float rounding);
+    strings are whitespace-trimmed. The original, unnormalized values are still what
+    gets shown in results - this only affects which rows are considered the same row.
+    """
+    if isinstance(value, np.generic):
+        value = value.item()
+    if value is None:
+        return None
+    if isinstance(value, float) and pd.isna(value):
+        return None
+    if isinstance(value, bool):
+        return value
+    if isinstance(value, int):
+        return Decimal(value)
+    if isinstance(value, Decimal):
+        return value
+    if isinstance(value, float):
+        return Decimal(str(value))
+    if isinstance(value, str):
+        text = value.strip()
+        try:
+            return Decimal(text)
+        except InvalidOperation:
+            return text
+    return value
+
+
+def _normalized_key_index(frame: pd.DataFrame, key_columns: list[str]) -> pd.Index:
+    normalized = [frame[col].map(_normalize_key_value) for col in key_columns]
+    if len(key_columns) == 1:
+        return pd.Index(normalized[0], name=key_columns[0])
+    return pd.MultiIndex.from_arrays(normalized, names=key_columns)
 
 
 def _resolve_compare_columns(
@@ -151,8 +194,10 @@ def compare_dataframes(
     _require_columns_present(source, target, key_columns)
     cols = _resolve_compare_columns(source, target, key_columns, compare_columns, ignore_columns)
 
-    src = source.set_index(key_columns, drop=False)
-    tgt = target.set_index(key_columns, drop=False)
+    src = source.copy()
+    src.index = _normalized_key_index(source, key_columns)
+    tgt = target.copy()
+    tgt.index = _normalized_key_index(target, key_columns)
     _require_unique_index(src, "source", key_columns)
     _require_unique_index(tgt, "target", key_columns)
 
