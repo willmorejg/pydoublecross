@@ -23,8 +23,10 @@ column, a formerly-populated column that's now all NULL) independently of the ot
 The actual "does source match target" question — missing rows, extra rows, mismatched values —
 is answered by `pydoublecross.validation.comparators.compare_dataframes`, not by GX:
 
-1. Both dataframes are indexed by `key_columns`. Duplicate keys on either side raise an error
-   immediately (silently picking one row would produce a misleading diff).
+1. Both dataframes are indexed by `key_columns`, using a *normalized* form of each key value for
+   matching purposes only (see [Key type normalization](#key-type-normalization) below). Duplicate
+   keys on either side raise an error immediately (silently picking one row would produce a
+   misleading diff).
 2. Keys present only in source → **missing in target**; only in target → **missing in source**.
 3. For keys present on both sides, each `compare_columns` entry (default: every column present
    in both, minus keys and `ignore_columns`) is compared:
@@ -34,6 +36,31 @@ is answered by `pydoublecross.validation.comparators.compare_dataframes`, not by
       - one side null and the other not is always a mismatch
 4. Missing-row and mismatch samples are capped (200 rows each) with `truncated: true` set on the
    result if anything was cut off — full row/mismatch counts in the summary are never capped.
+
+## Key type normalization
+
+Different databases (and even different drivers for the same database) routinely return "the
+same" key value as different Python types — an `INTEGER` column might come back as `int`,
+`numpy.int64`, or `decimal.Decimal` depending on the driver, and a legacy system's ID might be a
+`VARCHAR` where the current one is numeric. Matched against each other with strict equality, `1`,
+`"1"`, and `Decimal("1.00")` would never be considered the same row — every one of those rows
+would show up as **missing on both sides**, even though source and target agree.
+
+To avoid that, key values are normalized *only for matching purposes* before the join:
+
+- Numbers (`int`, `float`, `Decimal`, and numeric-looking strings) are compared by numeric value
+  via `Decimal` — no floating-point rounding, so `1`, `1.0`, `"1"`, and `Decimal("1.00")` are all
+  the same key.
+- Non-numeric strings are whitespace-trimmed (handles fixed-width `CHAR` columns padded with
+  trailing spaces on one side).
+- Everything else (dates, booleans, etc.) is compared as-is.
+
+This normalization affects *only* whether two rows are considered "the same row" — the
+`key`/`source_value`/`target_value` fields in results always show the original, unnormalized
+value each side actually returned, so a genuine type or formatting difference is still visible
+if you go looking for it; it just won't be misreported as a missing row. If you were adding
+`CAST`/`CONVERT` to your source/target SQL to work around this, you generally don't need to
+anymore — key matching handles it automatically.
 
 ## Status
 

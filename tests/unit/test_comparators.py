@@ -3,6 +3,8 @@
 
 from __future__ import annotations
 
+from decimal import Decimal
+
 import pandas as pd
 import pytest
 
@@ -100,3 +102,54 @@ def test_composite_key_columns() -> None:
     outcome = compare_dataframes(source, target, key_columns=["a", "b"])
     assert outcome.summary.mismatched_row_count == 1
     assert outcome.mismatches[0].key == {"a": 1, "b": 2}
+
+
+def test_key_matches_across_int_and_string_dtype() -> None:
+    # e.g. source driver returns an INTEGER id as int64, target returns a
+    # VARCHAR id as str - same logical key, different Python types.
+    source = pd.DataFrame({"id": [1, 2, 3], "name": ["a", "b", "c"]})
+    target = pd.DataFrame({"id": ["1", "2", "3"], "name": ["a", "b", "c"]})
+    outcome = compare_dataframes(source, target, key_columns=["id"])
+    assert outcome.summary.rows_fully_match
+    assert outcome.summary.missing_in_target_count == 0
+    assert outcome.summary.missing_in_source_count == 0
+
+
+def test_key_matches_across_decimal_and_int_dtype() -> None:
+    # e.g. an Oracle NUMBER column comes back as decimal.Decimal via the driver.
+    source = pd.DataFrame({"id": [1, 2], "name": ["a", "b"]})
+    target = pd.DataFrame({"id": [Decimal("1"), Decimal("2.00")], "name": ["a", "b"]})
+    outcome = compare_dataframes(source, target, key_columns=["id"])
+    assert outcome.summary.rows_fully_match
+
+
+def test_key_matches_with_whitespace_padding() -> None:
+    # e.g. a fixed-width CHAR(10) column padded with trailing spaces on one side.
+    source = pd.DataFrame({"id": ["ABC123"], "name": ["a"]})
+    target = pd.DataFrame({"id": ["ABC123   "], "name": ["a"]})
+    outcome = compare_dataframes(source, target, key_columns=["id"])
+    assert outcome.summary.rows_fully_match
+
+
+def test_key_mismatch_still_detected_when_genuinely_different() -> None:
+    # Type-normalization must not hide real differences.
+    source = pd.DataFrame({"id": [1, 2], "name": ["a", "b"]})
+    target = pd.DataFrame({"id": ["1", "3"], "name": ["a", "c"]})
+    outcome = compare_dataframes(source, target, key_columns=["id"])
+    assert outcome.summary.missing_in_target_count == 1  # id 2
+    assert outcome.summary.missing_in_source_count == 1  # id 3
+    assert outcome.missing_in_target == [{"id": 2}]
+    assert outcome.missing_in_source == [{"id": "3"}]
+
+
+def test_key_display_value_is_the_original_not_the_normalized_form() -> None:
+    # Matching is normalized, but reported key/value samples must show what was
+    # actually fetched from each side, so users can see the real discrepancy.
+    source = pd.DataFrame({"id": [1], "email": ["a@x.com"]})
+    target = pd.DataFrame({"id": ["1"], "email": ["WRONG@x.com"]})
+    outcome = compare_dataframes(source, target, key_columns=["id"])
+    assert outcome.summary.mismatched_cell_count == 1
+    m = outcome.mismatches[0]
+    assert m.key == {"id": 1}  # source's own representation
+    assert m.source_value == "a@x.com"
+    assert m.target_value == "WRONG@x.com"
