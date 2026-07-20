@@ -38,7 +38,7 @@ def list_datasources(runner: Annotated[ValidationRunner, Depends(get_runner)]):
     ]
 
 
-@router.get("/{name}")
+@router.get("/{name}", responses={404: {"description": "Unknown data source"}})
 def get_datasource(name: str, runner: Annotated[ValidationRunner, Depends(get_runner)]):
     ds = runner.config.data_sources.get(name)
     if ds is None:
@@ -46,7 +46,7 @@ def get_datasource(name: str, runner: Annotated[ValidationRunner, Depends(get_ru
     return _public(name, ds)
 
 
-@router.put("/{name}")
+@router.put("/{name}", responses={422: {"description": "Resulting configuration is invalid"}})
 def upsert_datasource(
     name: str,
     payload: DataSourceConfig,
@@ -59,7 +59,14 @@ def upsert_datasource(
     return _public(name, runner.config.data_sources[name])
 
 
-@router.delete("/{name}")
+@router.delete(
+    "/{name}",
+    responses={
+        404: {"description": "Unknown data source"},
+        409: {"description": "Data source is still referenced by a validation item"},
+        422: {"description": "Resulting configuration is invalid"},
+    },
+)
 def delete_datasource(name: str, runner: Annotated[ValidationRunner, Depends(get_runner)]):
     if name not in runner.config.data_sources:
         raise HTTPException(status_code=404, detail=f"unknown data source '{name}'")
@@ -82,7 +89,11 @@ def delete_datasource(name: str, runner: Annotated[ValidationRunner, Depends(get
     return {"detail": f"data source '{name}' deleted"}
 
 
-@router.post("/{name}/test", response_model=ConnectionTestResult)
+@router.post(
+    "/{name}/test",
+    response_model=ConnectionTestResult,
+    responses={404: {"description": "Unknown data source"}},
+)
 def test_datasource(name: str, runner: Annotated[ValidationRunner, Depends(get_runner)]):
     if name not in runner.config.data_sources:
         raise HTTPException(status_code=404, detail=f"unknown data source '{name}'")

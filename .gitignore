@@ -27,5 +27,6 @@ examples/
 # extracted into src/pydoublecross/web/static/favicon/ and docs/assets/
 favicon_io.zip
 
+# SonarCloud issue-list responses fetched via sonarqube.rest
 sonarqube-issues/*
 

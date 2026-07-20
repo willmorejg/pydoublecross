@@ -15,7 +15,7 @@ import yaml
 from pydoublecross.config.models import AppConfig
 from pydoublecross.exceptions import ConfigError
 
-_ENV_REF = re.compile(r"\$\{env:([A-Za-z_][A-Za-z0-9_]*)\}")
+_ENV_REF = re.compile(r"\$\{env:([A-Za-z_]\w*)\}", re.ASCII)
 
 
 def _interpolate_env_string(raw: str) -> str:

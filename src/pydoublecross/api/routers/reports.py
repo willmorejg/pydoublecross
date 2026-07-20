@@ -17,7 +17,13 @@ from pydoublecross.exceptions import ReportExportError
 router = APIRouter(prefix="/api/reports", tags=["reports"])
 
 
-@router.get("/{name}/{run_id}")
+@router.get(
+    "/{name}/{run_id}",
+    responses={
+        400: {"description": "Unsupported export format"},
+        404: {"description": "No such run result"},
+    },
+)
 def export_report(
     name: str,
     run_id: str,
