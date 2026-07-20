@@ -44,6 +44,22 @@ def test_value_mismatch_detected() -> None:
     assert m.target_value == "WRONG@x.com"
 
 
+def test_value_whitespace_padding_is_not_a_mismatch() -> None:
+    # e.g. a fixed-width CHAR(20) column padded with trailing spaces on one side.
+    source = pd.DataFrame({"id": [1], "role": ["producer"]})
+    target = pd.DataFrame({"id": [1], "role": ["producer   "]})
+    outcome = compare_dataframes(source, target, key_columns=["id"])
+    assert outcome.summary.mismatched_cell_count == 0
+
+
+def test_value_case_difference_is_still_a_mismatch() -> None:
+    # Whitespace is forgiven, but this must not become a blanket "loose" comparison.
+    source = pd.DataFrame({"id": [1], "role": ["producer"]})
+    target = pd.DataFrame({"id": [1], "role": ["Producer"]})
+    outcome = compare_dataframes(source, target, key_columns=["id"])
+    assert outcome.summary.mismatched_cell_count == 1
+
+
 def test_numeric_tolerance_suppresses_small_diffs() -> None:
     source = pd.DataFrame({"id": [1], "amount": [10.001]})
     target = pd.DataFrame({"id": [1], "amount": [10.002]})

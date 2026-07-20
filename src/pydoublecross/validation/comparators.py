@@ -141,7 +141,12 @@ def _column_mismatch_mask(
         either_null = src_col.isna() ^ tgt_col.isna()
         diff = (src_col - tgt_col).abs()
         return either_null | ((~both_null) & (diff > numeric_tolerance))
-    return ~(both_null | (src_col.astype(str) == tgt_col.astype(str)))
+    # Trim whitespace before comparing text: fixed-width CHAR columns padded on one
+    # side but not the other (very common when one side is a legacy/mainframe system)
+    # would otherwise report every row as mismatched despite looking identical.
+    src_str = src_col.astype(str).str.strip()
+    tgt_str = tgt_col.astype(str).str.strip()
+    return ~(both_null | (src_str == tgt_str))
 
 
 def _diff_common_rows(

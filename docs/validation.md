@@ -32,12 +32,21 @@ is answered by `pydoublecross.validation.comparators.compare_dataframes`, not by
    in both, minus keys and `ignore_columns`) is compared:
       - numeric columns use `numeric_tolerance` (`abs(source - target) <= tolerance` is not a
         mismatch)
-      - everything else compares as strings after normalizing both-null to "equal"
+      - everything else compares as strings, whitespace-trimmed (see
+        [Key type normalization](#key-type-normalization) — the same fixed-width `CHAR` padding
+        problem shows up here too, e.g. `"producer"` vs `"producer   "`), after normalizing
+        both-null to "equal"
       - one side null and the other not is always a mismatch
+      - this is case-*sensitive* — `"Producer"` vs `"producer"` is still a mismatch, only
+        whitespace is forgiven
 4. Missing-row and mismatch samples are capped (200 rows each) with `truncated: true` set on the
    result if anything was cut off — full row/mismatch counts in the summary are never capped.
 
 ## Key type normalization
+
+The same underlying problem — one side's driver/column type not matching the other's — shows up
+in two places: matching rows to each other (this section), and comparing non-key column values
+once rows are matched (the whitespace-trimming note above). Both exist for the same reason.
 
 Different databases (and even different drivers for the same database) routinely return "the
 same" key value as different Python types — an `INTEGER` column might come back as `int`,
