@@ -3,4 +3,4 @@
 
 """pyDoubleCross - validate data consistency between two data sources."""
 
-__version__ = "2026.7.5+70f9776"
+__version__ = "2026.7.6+78a4d3e"
