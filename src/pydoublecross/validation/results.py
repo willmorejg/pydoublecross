@@ -27,12 +27,15 @@ class ColumnMismatch(BaseModel):
     target_value: Any
 
 
-class GESideResult(BaseModel):
+class EngineCheckResult(BaseModel):
+    """One engine's (Great Expectations or Pandera) per-side check outcome."""
+
+    engine: Literal["great_expectations", "pandera"]
     role: Literal["source", "target"]
     success: bool
-    expectations_evaluated: int
-    expectations_failed: int
-    failed_expectation_types: list[str] = Field(default_factory=list)
+    checks_evaluated: int
+    checks_failed: int
+    failed_check_names: list[str] = Field(default_factory=list)
 
 
 class ComparisonSummary(BaseModel):
@@ -74,5 +77,5 @@ class ValidationRunResult(BaseModel):
     missing_in_source: list[dict[str, Any]] = Field(default_factory=list)
     mismatches: list[ColumnMismatch] = Field(default_factory=list)
     truncated: bool = False
-    ge_results: list[GESideResult] = Field(default_factory=list)
+    engine_results: list[EngineCheckResult] = Field(default_factory=list)
     error: str | None = None

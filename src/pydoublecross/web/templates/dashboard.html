@@ -43,7 +43,8 @@ SPDX-License-Identifier: Apache-2.0
               {% endif %}
             </td>
             <td class="actions">
-              <form method="post" action="/validations/{{ item.name }}/run" style="display:inline">
+              <form method="post" action="/validations/{{ item.name }}/run" style="display:inline"
+                    data-loading-message="Running {{ item.name }}… this may take a moment">
                 <button type="submit">Run</button>
               </form>
               <a href="/validations/{{ item.name }}/edit">Edit</a>

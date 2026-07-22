@@ -61,6 +61,7 @@ validations:
     compare_columns: [name, email, status]   # omit to compare all common columns
     ignore_columns: []
     numeric_tolerance: 0.0        # abs(source - target) <= tolerance is not a mismatch
+    validation_engine: great_expectations   # or: pandera | both - see Validation
     expectations:
       row_count_match: true       # each side's row count must be > 0
       schema_match: true          # each side's columns must match its query's columns
@@ -68,6 +69,18 @@ validations:
 ```
 
 `source`/`target` each need exactly one of `sql` or `table`.
+
+!!! important "Column names are case-sensitive"
+    `key_columns`, `compare_columns`, and `ignore_columns` are matched against each side's
+    fetched column names **case-sensitively** — `customer_id` and `CUSTOMER_ID` are different
+    names as far as matching is concerned. This is the single most common configuration mistake
+    when reconciling across two different database engines, since many databases fold unquoted
+    identifier case differently: Oracle uppercases (`CUSTOMER_ID`), PostgreSQL lowercases
+    (`customer_id`), SQL Server/MySQL/SQLite generally preserve whatever case the query used. Use
+    whichever case your `sql`/`table` actually returns for that side — check with
+    `SELECT * FROM ...` in a client if unsure. Getting this wrong raises a clear
+    `key_columns`/`compare_columns not present in both sides` error rather than silently
+    misbehaving, and that error names the case-mismatched column explicitly when one exists.
 
 ## Server-side edits
 

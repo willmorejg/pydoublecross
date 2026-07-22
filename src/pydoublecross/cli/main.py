@@ -69,11 +69,11 @@ def _print_result(result) -> None:
     table.add_row("Target cache hit", str(result.target_cache_hit))
     console.print(table)
 
-    for ge in result.ge_results:
-        status = "OK" if ge.success else "FAILED"
+    for er in result.engine_results:
+        status = "OK" if er.success else "FAILED"
         console.print(
-            f"  GE ({ge.role}): {status} "
-            f"({ge.expectations_evaluated - ge.expectations_failed}/{ge.expectations_evaluated} passed)"
+            f"  {er.engine} ({er.role}): {status} "
+            f"({er.checks_evaluated - er.checks_failed}/{er.checks_evaluated} passed)"
         )
 
 
