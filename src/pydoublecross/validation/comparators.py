@@ -161,16 +161,36 @@ def _column_mismatch_mask(
     src_col: pd.Series, tgt_col: pd.Series, numeric_tolerance: float
 ) -> pd.Series:
     both_null = src_col.isna() & tgt_col.isna()
-    if pd.api.types.is_numeric_dtype(src_col) and pd.api.types.is_numeric_dtype(tgt_col):
-        either_null = src_col.isna() ^ tgt_col.isna()
-        diff = (src_col - tgt_col).abs()
-        return either_null | ((~both_null) & (diff > numeric_tolerance))
+    either_null = src_col.isna() ^ tgt_col.isna()
+
     # Trim whitespace before comparing text: fixed-width CHAR columns padded on one
     # side but not the other (very common when one side is a legacy/mainframe system)
     # would otherwise report every row as mismatched despite looking identical.
     src_str = src_col.astype(str).str.strip()
     tgt_str = tgt_col.astype(str).str.strip()
-    return ~(both_null | (src_str == tgt_str))
+    string_mismatch = src_str != tgt_str
+
+    # A column can be numeric on one side and text on the other (e.g. one side's
+    # driver/query returns "808", the other returns 808.0 as text via a linked
+    # server or CAST) - dtype alone can't tell us to compare numerically. Instead,
+    # normalize every value the same way key columns are (see `_normalize_key_value`)
+    # and compare as numbers wherever both sides parse as one; only genuinely
+    # non-numeric values fall back to the (whitespace-trimmed) string comparison.
+    normalized_src = src_col.map(_normalize_key_value)
+    normalized_tgt = tgt_col.map(_normalize_key_value)
+    both_numeric = normalized_src.map(lambda v: isinstance(v, Decimal)) & normalized_tgt.map(
+        lambda v: isinstance(v, Decimal)
+    )
+
+    numeric_mismatch = pd.Series(False, index=src_col.index)
+    if both_numeric.any():
+        idx = both_numeric[both_numeric].index
+        diffs = (normalized_src.loc[idx] - normalized_tgt.loc[idx]).abs()
+        tolerance = Decimal(str(numeric_tolerance))
+        numeric_mismatch.loc[idx] = diffs > tolerance
+
+    cell_mismatch = (both_numeric & numeric_mismatch) | (~both_numeric & string_mismatch)
+    return either_null | ((~both_null) & cell_mismatch)
 
 
 def _diff_common_rows(

@@ -60,6 +60,22 @@ def test_value_case_difference_is_still_a_mismatch() -> None:
     assert outcome.summary.mismatched_cell_count == 1
 
 
+def test_numeric_value_as_text_vs_float_is_not_a_mismatch() -> None:
+    # e.g. one side returns an identifier as text ("808"), the other as a float
+    # (808.0) via a linked server/CAST - same number, different dtype/formatting.
+    source = pd.DataFrame({"id": [1, 2], "AOM_Identifier": ["808", "3"]})
+    target = pd.DataFrame({"id": [1, 2], "AOM_Identifier": [808.0, 3.0]})
+    outcome = compare_dataframes(source, target, key_columns=["id"])
+    assert outcome.summary.mismatched_cell_count == 0
+
+
+def test_numeric_value_genuinely_different_still_a_mismatch() -> None:
+    source = pd.DataFrame({"id": [1], "AOM_Identifier": ["808"]})
+    target = pd.DataFrame({"id": [1], "AOM_Identifier": [809.0]})
+    outcome = compare_dataframes(source, target, key_columns=["id"])
+    assert outcome.summary.mismatched_cell_count == 1
+
+
 def test_numeric_tolerance_suppresses_small_diffs() -> None:
     source = pd.DataFrame({"id": [1], "amount": [10.001]})
     target = pd.DataFrame({"id": [1], "amount": [10.002]})
