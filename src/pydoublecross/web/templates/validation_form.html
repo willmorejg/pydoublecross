@@ -83,7 +83,16 @@ SPDX-License-Identifier: Apache-2.0
     </fieldset>
 
     <fieldset>
-      <legend>Great Expectations checks (per side)</legend>
+      <legend>Per-side checks</legend>
+      <label>Validation engine
+        <select name="validation_engine">
+          {% set current_engine = item.validation_engine if item else "great_expectations" %}
+          <option value="great_expectations" {{ "selected" if current_engine == "great_expectations" else "" }}>Great Expectations</option>
+          <option value="pandera" {{ "selected" if current_engine == "pandera" else "" }}>Pandera</option>
+          <option value="both" {{ "selected" if current_engine == "both" else "" }}>Both</option>
+        </select>
+      </label>
+      <p class="hint">The checks below run identically regardless of engine - only which library checks them changes.</p>
       <label>
         <input type="checkbox" name="row_count_match"
                {{ "checked" if not item or item.expectations.row_count_match else "" }}>

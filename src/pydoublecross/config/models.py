@@ -116,8 +116,16 @@ class DataSourceRef(BaseModel):
         return f"SELECT * FROM {self.table}"
 
 
+ValidationEngineChoice = Literal["great_expectations", "pandera", "both"]
+
+
 class ExpectationToggles(BaseModel):
-    """Which built-in Great Expectations checks to run per side."""
+    """Which built-in per-side checks to run, shared across whichever engine(s) are selected.
+
+    The same toggles drive both Great Expectations and Pandera so the two engines stay
+    directly comparable - switching `validation_engine` doesn't change what's being checked,
+    only which library checks it.
+    """
 
     row_count_match: bool = True
     schema_match: bool = True
@@ -134,6 +142,7 @@ class ValidationItemConfig(BaseModel):
     compare_columns: list[str] | None = None
     ignore_columns: list[str] = Field(default_factory=list)
     numeric_tolerance: float = 0.0
+    validation_engine: ValidationEngineChoice = "great_expectations"
     expectations: ExpectationToggles = Field(default_factory=ExpectationToggles)
 
 

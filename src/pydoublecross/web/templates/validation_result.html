@@ -59,17 +59,18 @@ SPDX-License-Identifier: Apache-2.0
     <p>Source cache hit: {{ result.source_cache_hit }} &middot; Target cache hit: {{ result.target_cache_hit }}
       {% if result.truncated %}&middot; <strong>sample lists truncated</strong>{% endif %}</p>
 
-    <h2>Great Expectations</h2>
+    <h2>Engine Checks</h2>
     <table class="data-table">
-      <thead><tr><th>Side</th><th>Success</th><th>Evaluated</th><th>Failed</th><th>Failed types</th></tr></thead>
+      <thead><tr><th>Engine</th><th>Side</th><th>Success</th><th>Evaluated</th><th>Failed</th><th>Failed checks</th></tr></thead>
       <tbody>
-        {% for ge in result.ge_results %}
+        {% for er in result.engine_results %}
           <tr>
-            <td>{{ ge.role }}</td>
-            <td>{{ ge.success }}</td>
-            <td>{{ ge.expectations_evaluated }}</td>
-            <td>{{ ge.expectations_failed }}</td>
-            <td>{{ ge.failed_expectation_types | join(", ") }}</td>
+            <td>{{ er.engine }}</td>
+            <td>{{ er.role }}</td>
+            <td>{{ er.success }}</td>
+            <td>{{ er.checks_evaluated }}</td>
+            <td>{{ er.checks_failed }}</td>
+            <td>{{ er.failed_check_names | join(", ") }}</td>
           </tr>
         {% endfor %}
       </tbody>

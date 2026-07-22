@@ -63,7 +63,21 @@ def config_path(tmp_path: Path, sqlite_pair: tuple[Path, Path]) -> Path:
                 "source": {"data_source": "src", "table": "customers"},
                 "target": {"data_source": "tgt", "table": "customers"},
                 "key_columns": ["customer_id"],
-            }
+            },
+            "customer_check_pandera": {
+                "description": "test, pandera engine",
+                "source": {"data_source": "src", "table": "customers"},
+                "target": {"data_source": "tgt", "table": "customers"},
+                "key_columns": ["customer_id"],
+                "validation_engine": "pandera",
+            },
+            "customer_check_both": {
+                "description": "test, both engines",
+                "source": {"data_source": "src", "table": "customers"},
+                "target": {"data_source": "tgt", "table": "customers"},
+                "key_columns": ["customer_id"],
+                "validation_engine": "both",
+            },
         },
     }
     path = tmp_path / "config.yaml"

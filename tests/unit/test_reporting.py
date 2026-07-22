@@ -9,11 +9,11 @@ from pathlib import Path
 import openpyxl
 
 from pydoublecross.reporting.exporters.excel import ExcelExporter
-from pydoublecross.reporting.report import ge_result_rows, mismatch_rows, summary_rows
+from pydoublecross.reporting.report import engine_result_rows, mismatch_rows, summary_rows
 from pydoublecross.validation.results import (
     ColumnMismatch,
     ComparisonSummary,
-    GESideResult,
+    EngineCheckResult,
     RunStatus,
     ValidationRunResult,
 )
@@ -45,12 +45,20 @@ def _sample_result() -> ValidationRunResult:
                 key={"customer_id": 2}, column="email", source_value="b@x.com", target_value="bad"
             )
         ],
-        ge_results=[
-            GESideResult(
-                role="source", success=True, expectations_evaluated=3, expectations_failed=0
+        engine_results=[
+            EngineCheckResult(
+                engine="great_expectations",
+                role="source",
+                success=True,
+                checks_evaluated=3,
+                checks_failed=0,
             ),
-            GESideResult(
-                role="target", success=True, expectations_evaluated=3, expectations_failed=0
+            EngineCheckResult(
+                engine="great_expectations",
+                role="target",
+                success=True,
+                checks_evaluated=3,
+                checks_failed=0,
             ),
         ],
     )
@@ -70,10 +78,11 @@ def test_mismatch_rows_flattens_key() -> None:
     ]
 
 
-def test_ge_result_rows() -> None:
-    rows = ge_result_rows(_sample_result())
+def test_engine_result_rows() -> None:
+    rows = engine_result_rows(_sample_result())
     assert len(rows) == 2
     assert rows[0]["role"] == "source"
+    assert rows[0]["engine"] == "great_expectations"
 
 
 def test_excel_exporter_writes_all_sheets(tmp_path: Path) -> None:
@@ -89,7 +98,7 @@ def test_excel_exporter_writes_all_sheets(tmp_path: Path) -> None:
         "Missing In Target",
         "Missing In Source",
         "Value Mismatches",
-        "GE Expectations",
+        "Engine Checks",
     }
     assert wb["Value Mismatches"].max_row == 2  # header + 1 mismatch row
 

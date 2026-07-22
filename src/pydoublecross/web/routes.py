@@ -177,6 +177,7 @@ def _validation_from_form(form: dict[str, Any]) -> ValidationItemConfig:
         ),
         ignore_columns=_split_list(str(form.get("ignore_columns", ""))),
         numeric_tolerance=float(form.get("numeric_tolerance") or 0.0),
+        validation_engine=form.get("validation_engine") or "great_expectations",
         expectations=ExpectationToggles(
             row_count_match=form.get("row_count_match") == "on",
             schema_match=form.get("schema_match") == "on",

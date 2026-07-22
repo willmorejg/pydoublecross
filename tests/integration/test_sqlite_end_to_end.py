@@ -24,7 +24,7 @@ def test_full_run_detects_known_mismatches(runner: ValidationRunner) -> None:
     assert result.summary.missing_in_target_count == 1  # customer 3
     assert result.summary.missing_in_source_count == 1  # customer 4
     assert result.summary.mismatched_row_count == 1  # customer 2's email
-    assert all(ge.success for ge in result.ge_results)
+    assert all(er.success for er in result.engine_results)
 
 
 def test_source_cache_hit_on_second_run(runner: ValidationRunner) -> None:
@@ -61,7 +61,25 @@ def test_run_persists_and_is_retrievable_from_history(runner: ValidationRunner) 
 
 def test_run_all_runs_every_item(runner: ValidationRunner) -> None:
     results = runner.run_all()
-    assert {r.item_name for r in results} == {"customer_check"}
+    assert {r.item_name for r in results} == {
+        "customer_check",
+        "customer_check_pandera",
+        "customer_check_both",
+    }
+
+
+def test_pandera_engine_choice_runs_only_pandera(runner: ValidationRunner) -> None:
+    result = runner.run("customer_check_pandera")
+    assert {er.engine for er in result.engine_results} == {"pandera"}
+    assert len(result.engine_results) == 2  # source + target
+    assert all(er.success for er in result.engine_results)
+
+
+def test_both_engine_choice_runs_both(runner: ValidationRunner) -> None:
+    result = runner.run("customer_check_both")
+    assert {er.engine for er in result.engine_results} == {"great_expectations", "pandera"}
+    assert len(result.engine_results) == 4  # 2 engines x source/target
+    assert all(er.success for er in result.engine_results)
 
 
 def test_export_to_excel(runner: ValidationRunner, tmp_path: Path) -> None:

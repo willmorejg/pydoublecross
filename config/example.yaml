@@ -57,6 +57,8 @@ validations:
     key_columns: [customer_id]
     compare_columns: [name, email, status]
     numeric_tolerance: 0.0
+    # great_expectations (default) | pandera | both - see docs/validation.md
+    validation_engine: both
     expectations:
       row_count_match: true
       schema_match: true

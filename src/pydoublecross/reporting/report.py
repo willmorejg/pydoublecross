@@ -50,14 +50,15 @@ def mismatch_rows(result: ValidationRunResult) -> list[dict[str, Any]]:
     return rows
 
 
-def ge_result_rows(result: ValidationRunResult) -> list[dict[str, Any]]:
+def engine_result_rows(result: ValidationRunResult) -> list[dict[str, Any]]:
     return [
         {
+            "engine": r.engine,
             "role": r.role,
             "success": r.success,
-            "expectations_evaluated": r.expectations_evaluated,
-            "expectations_failed": r.expectations_failed,
-            "failed_expectation_types": ", ".join(r.failed_expectation_types),
+            "checks_evaluated": r.checks_evaluated,
+            "checks_failed": r.checks_failed,
+            "failed_check_names": ", ".join(r.failed_check_names),
         }
-        for r in result.ge_results
+        for r in result.engine_results
     ]
