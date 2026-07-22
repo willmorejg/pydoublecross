@@ -20,6 +20,7 @@ SPDX-License-Identifier: Apache-2.0
     crossorigin="anonymous"
     defer
   ></script>
+  <script src="/static/js/app.js" defer></script>
 </head>
 <body>
   <header class="topbar">
@@ -36,5 +37,9 @@ SPDX-License-Identifier: Apache-2.0
   <main class="content">
     {% block content %}{% endblock %}
   </main>
+  <div id="loading-overlay" class="loading-overlay" aria-hidden="true">
+    <div class="spinner"></div>
+    <span class="loading-message">Working…</span>
+  </div>
 </body>
 </html>

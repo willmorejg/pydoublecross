@@ -74,6 +74,24 @@ def _normalized_key_index(frame: pd.DataFrame, key_columns: list[str]) -> pd.Ind
     return pd.MultiIndex.from_arrays(normalized, names=key_columns)
 
 
+def _case_sensitivity_hint(missing: list[str], *column_sets: pd.Index) -> str:
+    """If a "missing" name actually exists under different case, say so explicitly.
+
+    Column name matching (`key_columns`/`compare_columns`/`ignore_columns` against the
+    dataframe's actual columns) is case-sensitive - this is the single most common
+    reason a name that "should" be there is reported missing.
+    """
+    notes: dict[str, str] = {}
+    for name in missing:
+        for columns in column_sets:
+            for col in columns:
+                if col != name and col.lower() == name.lower():
+                    notes.setdefault(name, f"'{name}' configured vs '{col}' actual")
+    if not notes:
+        return ""
+    return f" Column names are matched case-sensitively - found: {', '.join(notes.values())}."
+
+
 def _resolve_compare_columns(
     source: pd.DataFrame,
     target: pd.DataFrame,
@@ -85,9 +103,12 @@ def _resolve_compare_columns(
         missing_source = [c for c in compare_columns if c not in source.columns]
         missing_target = [c for c in compare_columns if c not in target.columns]
         if missing_source or missing_target:
+            hint = _case_sensitivity_hint(
+                missing_source + missing_target, source.columns, target.columns
+            )
             raise ValidationEngineError(
                 "compare_columns not present in both sides: "
-                f"missing_from_source={missing_source} missing_from_target={missing_target}"
+                f"missing_from_source={missing_source} missing_from_target={missing_target}.{hint}"
             )
         return list(compare_columns)
 
@@ -101,9 +122,12 @@ def _require_columns_present(
     missing_source = [c for c in key_columns if c not in source.columns]
     missing_target = [c for c in key_columns if c not in target.columns]
     if missing_source or missing_target:
+        hint = _case_sensitivity_hint(
+            missing_source + missing_target, source.columns, target.columns
+        )
         raise ValidationEngineError(
             "key_columns not present in both sides: "
-            f"missing_from_source={missing_source} missing_from_target={missing_target}"
+            f"missing_from_source={missing_source} missing_from_target={missing_target}.{hint}"
         )
 
 

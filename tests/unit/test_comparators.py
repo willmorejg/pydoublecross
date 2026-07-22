@@ -98,6 +98,34 @@ def test_explicit_compare_columns_missing_raises() -> None:
         compare_dataframes(source, target, key_columns=["id"], compare_columns=["does_not_exist"])
 
 
+def test_key_columns_are_case_sensitive() -> None:
+    # Common cross-database case: Oracle uppercases unquoted identifiers, Postgres
+    # lowercases them - "the same" column can come back with different case.
+    source = pd.DataFrame({"customer_id": [1, 2], "name": ["a", "b"]})
+    target = pd.DataFrame({"CUSTOMER_ID": [1, 2], "name": ["a", "b"]})
+    with pytest.raises(ValidationEngineError, match="case-sensitiv") as exc_info:
+        compare_dataframes(source, target, key_columns=["customer_id"])
+    assert "'customer_id'" in str(exc_info.value)
+    assert "'CUSTOMER_ID'" in str(exc_info.value)
+
+
+def test_compare_columns_case_mismatch_hint() -> None:
+    source = pd.DataFrame({"id": [1], "Email": ["a@x.com"]})
+    target = pd.DataFrame({"id": [1], "email": ["a@x.com"]})
+    with pytest.raises(ValidationEngineError, match="case-sensitiv") as exc_info:
+        compare_dataframes(source, target, key_columns=["id"], compare_columns=["Email"])
+    assert "'Email'" in str(exc_info.value)
+    assert "'email'" in str(exc_info.value)
+
+
+def test_no_case_hint_when_column_genuinely_absent() -> None:
+    source = pd.DataFrame({"id": [1], "name": ["a"]})
+    target = pd.DataFrame({"id": [1], "name": ["a"]})
+    with pytest.raises(ValidationEngineError) as exc_info:
+        compare_dataframes(source, target, key_columns=["id"], compare_columns=["phone"])
+    assert "case-sensitiv" not in str(exc_info.value)
+
+
 def test_duplicate_key_raises() -> None:
     source = pd.DataFrame({"id": [1, 1], "name": ["a", "b"]})
     target = pd.DataFrame({"id": [1], "name": ["a"]})

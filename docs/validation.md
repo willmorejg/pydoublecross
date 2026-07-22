@@ -39,12 +39,16 @@ problems (e.g. a column dropping out mid-run), not schema *drift* against some p
 The actual "does source match target" question — missing rows, extra rows, mismatched values —
 is answered by `pydoublecross.validation.comparators.compare_dataframes`, not by GX:
 
-1. Both dataframes are indexed by `key_columns`, using a *normalized* form of each key value for
+1. `key_columns`, `compare_columns`, and `ignore_columns` are matched against each side's
+   *actual* fetched column names, **case-sensitively** — see the case-sensitivity note in
+   [Configuration](configuration.md#validation-items). This is a common trap when source and
+   target are different database engines that fold unquoted identifier case differently.
+2. Both dataframes are indexed by `key_columns`, using a *normalized* form of each key value for
    matching purposes only (see [Key type normalization](#key-type-normalization) below). Duplicate
    keys on either side raise an error immediately (silently picking one row would produce a
    misleading diff).
-2. Keys present only in source → **missing in target**; only in target → **missing in source**.
-3. For keys present on both sides, each `compare_columns` entry (default: every column present
+3. Keys present only in source → **missing in target**; only in target → **missing in source**.
+4. For keys present on both sides, each `compare_columns` entry (default: every column present
    in both, minus keys and `ignore_columns`) is compared:
       - numeric columns use `numeric_tolerance` (`abs(source - target) <= tolerance` is not a
         mismatch)
@@ -55,7 +59,7 @@ is answered by `pydoublecross.validation.comparators.compare_dataframes`, not by
       - one side null and the other not is always a mismatch
       - this is case-*sensitive* — `"Producer"` vs `"producer"` is still a mismatch, only
         whitespace is forgiven
-4. Missing-row and mismatch samples are capped (200 rows each) with `truncated: true` set on the
+5. Missing-row and mismatch samples are capped (200 rows each) with `truncated: true` set on the
    result if anything was cut off — full row/mismatch counts in the summary are never capped.
 
 ## Key type normalization
