@@ -11,7 +11,7 @@ import pandas as pd
 
 from pydoublecross.exceptions import ReportExportError
 from pydoublecross.reporting.exporters.base import Exporter
-from pydoublecross.reporting.report import ge_result_rows, mismatch_rows, summary_rows
+from pydoublecross.reporting.report import engine_result_rows, mismatch_rows, summary_rows
 from pydoublecross.validation.results import ValidationRunResult
 
 _EMPTY_NOTE = pd.DataFrame([{"note": "no rows"}])
@@ -39,8 +39,8 @@ class ExcelExporter(Exporter):
                 _sheet(mismatch_rows(result)).to_excel(
                     writer, sheet_name="Value Mismatches", index=False
                 )
-                _sheet(ge_result_rows(result)).to_excel(
-                    writer, sheet_name="GE Expectations", index=False
+                _sheet(engine_result_rows(result)).to_excel(
+                    writer, sheet_name="Engine Checks", index=False
                 )
         except Exception as exc:
             raise ReportExportError(f"failed to export Excel report: {exc}") from exc

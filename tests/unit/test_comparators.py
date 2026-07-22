@@ -60,6 +60,22 @@ def test_value_case_difference_is_still_a_mismatch() -> None:
     assert outcome.summary.mismatched_cell_count == 1
 
 
+def test_numeric_value_as_text_vs_float_is_not_a_mismatch() -> None:
+    # e.g. one side returns an identifier as text ("808"), the other as a float
+    # (808.0) via a linked server/CAST - same number, different dtype/formatting.
+    source = pd.DataFrame({"id": [1, 2], "AOM_Identifier": ["808", "3"]})
+    target = pd.DataFrame({"id": [1, 2], "AOM_Identifier": [808.0, 3.0]})
+    outcome = compare_dataframes(source, target, key_columns=["id"])
+    assert outcome.summary.mismatched_cell_count == 0
+
+
+def test_numeric_value_genuinely_different_still_a_mismatch() -> None:
+    source = pd.DataFrame({"id": [1], "AOM_Identifier": ["808"]})
+    target = pd.DataFrame({"id": [1], "AOM_Identifier": [809.0]})
+    outcome = compare_dataframes(source, target, key_columns=["id"])
+    assert outcome.summary.mismatched_cell_count == 1
+
+
 def test_numeric_tolerance_suppresses_small_diffs() -> None:
     source = pd.DataFrame({"id": [1], "amount": [10.001]})
     target = pd.DataFrame({"id": [1], "amount": [10.002]})
@@ -96,6 +112,34 @@ def test_explicit_compare_columns_missing_raises() -> None:
     target = pd.DataFrame({"id": [1], "name": ["a"]})
     with pytest.raises(ValidationEngineError, match="compare_columns"):
         compare_dataframes(source, target, key_columns=["id"], compare_columns=["does_not_exist"])
+
+
+def test_key_columns_are_case_sensitive() -> None:
+    # Common cross-database case: Oracle uppercases unquoted identifiers, Postgres
+    # lowercases them - "the same" column can come back with different case.
+    source = pd.DataFrame({"customer_id": [1, 2], "name": ["a", "b"]})
+    target = pd.DataFrame({"CUSTOMER_ID": [1, 2], "name": ["a", "b"]})
+    with pytest.raises(ValidationEngineError, match="case-sensitiv") as exc_info:
+        compare_dataframes(source, target, key_columns=["customer_id"])
+    assert "'customer_id'" in str(exc_info.value)
+    assert "'CUSTOMER_ID'" in str(exc_info.value)
+
+
+def test_compare_columns_case_mismatch_hint() -> None:
+    source = pd.DataFrame({"id": [1], "Email": ["a@x.com"]})
+    target = pd.DataFrame({"id": [1], "email": ["a@x.com"]})
+    with pytest.raises(ValidationEngineError, match="case-sensitiv") as exc_info:
+        compare_dataframes(source, target, key_columns=["id"], compare_columns=["Email"])
+    assert "'Email'" in str(exc_info.value)
+    assert "'email'" in str(exc_info.value)
+
+
+def test_no_case_hint_when_column_genuinely_absent() -> None:
+    source = pd.DataFrame({"id": [1], "name": ["a"]})
+    target = pd.DataFrame({"id": [1], "name": ["a"]})
+    with pytest.raises(ValidationEngineError) as exc_info:
+        compare_dataframes(source, target, key_columns=["id"], compare_columns=["phone"])
+    assert "case-sensitiv" not in str(exc_info.value)
 
 
 def test_duplicate_key_raises() -> None:

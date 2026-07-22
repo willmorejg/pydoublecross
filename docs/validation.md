@@ -2,33 +2,53 @@
 
 A validation run combines two distinct kinds of checks, because they answer different questions.
 
-## Per-side checks (Great Expectations)
+## Per-side checks (Great Expectations and/or Pandera)
 
-[Great Expectations](https://greatexpectations.io/) validates *one batch* against a suite of
-expectations — it doesn't compare two batches to each other. So for each side (source and
-target) independently, pyDoubleCross builds an ephemeral GX context, registers the fetched
-dataframe as a pandas data asset, and runs a small suite controlled by the item's `expectations`
-block:
+Both [Great Expectations](https://greatexpectations.io/) and [Pandera](https://pandera.readthedocs.io/)
+validate *one batch* against a schema/suite — neither compares two batches to each other, that's
+the job of [cross-source comparison](#cross-source-comparison-pandas) below. So for each side
+(source and target) independently, pyDoubleCross runs a small check set controlled by the item's
+`expectations` block, using whichever engine(s) `validation_engine` selects:
 
-- `row_count_match` → `ExpectTableRowCountToBeBetween(min_value=1)` — the side isn't empty
-- `schema_match` → `ExpectTableColumnsToMatchSet` — the columns are what the query said they'd be
-- `null_checks` → `ExpectColumnValuesToNotBeNull` per column, skipping columns that are *entirely*
-  null (treated as intentional, not flagged)
+| `expectations` toggle | Great Expectations | Pandera |
+|---|---|---|
+| `row_count_match` | `ExpectTableRowCountToBeBetween(min_value=1)` | dataframe-level `Check(len(df) > 0)` |
+| `schema_match` | `ExpectTableColumnsToMatchSet` | `DataFrameSchema(..., strict=True)` |
+| `null_checks` | `ExpectColumnValuesToNotBeNull` per column | `Column(nullable=False)` per column |
 
-This catches "this side of the query is obviously broken" problems (empty result, missing
-column, a formerly-populated column that's now all NULL) independently of the other side.
+Both engines skip the null check for columns that are *entirely* null (treated as intentional,
+not flagged). This catches "this side of the query is obviously broken" problems (empty result,
+missing column, a formerly-populated column that's now all NULL) independently of the other side.
+
+`validation_engine` (per validation item) is one of:
+
+- `great_expectations` (default) — only GE runs
+- `pandera` — only Pandera runs; lighter weight, pure-Python, no ephemeral GX context per run
+- `both` — both run, independently, and both must pass for the item to pass; results from both
+  show up side by side (tagged by `engine`) in the run result, report, and Excel export
+
+The `expectations` toggles mean the same thing regardless of engine, so switching
+`validation_engine` doesn't change *what's* checked, only which library checks it — useful for
+cross-checking one engine's result against the other, or for picking whichever is lighter/faster
+for your use case. Note `schema_match` has the same limitation on both engines: there's no
+separately-declared "expected schema" to diff against yet, so it only catches gross structural
+problems (e.g. a column dropping out mid-run), not schema *drift* against some prior baseline.
 
 ## Cross-source comparison (pandas)
 
 The actual "does source match target" question — missing rows, extra rows, mismatched values —
 is answered by `pydoublecross.validation.comparators.compare_dataframes`, not by GX:
 
-1. Both dataframes are indexed by `key_columns`, using a *normalized* form of each key value for
+1. `key_columns`, `compare_columns`, and `ignore_columns` are matched against each side's
+   *actual* fetched column names, **case-sensitively** — see the case-sensitivity note in
+   [Configuration](configuration.md#validation-items). This is a common trap when source and
+   target are different database engines that fold unquoted identifier case differently.
+2. Both dataframes are indexed by `key_columns`, using a *normalized* form of each key value for
    matching purposes only (see [Key type normalization](#key-type-normalization) below). Duplicate
    keys on either side raise an error immediately (silently picking one row would produce a
    misleading diff).
-2. Keys present only in source → **missing in target**; only in target → **missing in source**.
-3. For keys present on both sides, each `compare_columns` entry (default: every column present
+3. Keys present only in source → **missing in target**; only in target → **missing in source**.
+4. For keys present on both sides, each `compare_columns` entry (default: every column present
    in both, minus keys and `ignore_columns`) is compared:
       - numeric columns use `numeric_tolerance` (`abs(source - target) <= tolerance` is not a
         mismatch)
@@ -39,7 +59,7 @@ is answered by `pydoublecross.validation.comparators.compare_dataframes`, not by
       - one side null and the other not is always a mismatch
       - this is case-*sensitive* — `"Producer"` vs `"producer"` is still a mismatch, only
         whitespace is forgiven
-4. Missing-row and mismatch samples are capped (200 rows each) with `truncated: true` set on the
+5. Missing-row and mismatch samples are capped (200 rows each) with `truncated: true` set on the
    result if anything was cut off — full row/mismatch counts in the summary are never capped.
 
 ## Key type normalization
@@ -73,8 +93,9 @@ anymore — key matching handles it automatically.
 
 ## Status
 
-A run is `passed` only if every per-side GX check succeeded *and* the comparison found zero
-missing/mismatched rows. Otherwise it's `failed`, or `error` if the run couldn't complete (bad
+A run is `passed` only if every per-side check from every selected engine succeeded *and* the
+comparison found zero missing/mismatched rows. Otherwise it's `failed`, or `error` if the run
+couldn't complete (bad
 SQL, connection failure, misconfigured key columns, etc. — the error message is captured on the
 result instead of raising past the API/CLI boundary).
 

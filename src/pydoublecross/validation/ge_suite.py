@@ -21,14 +21,14 @@ from great_expectations.data_context.types.base import ProgressBarsConfig
 
 from pydoublecross.config.models import ExpectationToggles
 from pydoublecross.exceptions import ValidationEngineError
-from pydoublecross.validation.results import GESideResult
+from pydoublecross.validation.results import EngineCheckResult
 
 
 def run_side_expectations(
     frame: pd.DataFrame,
     role: Literal["source", "target"],
     toggles: ExpectationToggles,
-) -> GESideResult:
+) -> EngineCheckResult:
     """Run the configured built-in expectation checks against one side's dataframe."""
     suffix = uuid.uuid4().hex[:8]
     try:
@@ -73,12 +73,13 @@ def run_side_expectations(
         failed_types = [
             r.expectation_config.type for r in results if not r.success and r.expectation_config
         ]
-        return GESideResult(
+        return EngineCheckResult(
+            engine="great_expectations",
             role=role,
             success=bool(run_result.success),
-            expectations_evaluated=len(results),
-            expectations_failed=len(failed_types),
-            failed_expectation_types=failed_types,
+            checks_evaluated=len(results),
+            checks_failed=len(failed_types),
+            failed_check_names=failed_types,
         )
     except ValidationEngineError:
         raise

@@ -198,3 +198,43 @@ input, select, textarea {
   color: var(--error);
   border: 1px solid #fecaca;
 }
+
+/* Shown while a query/validation run is in flight - see static/js/app.js */
+body.is-loading,
+body.is-loading * {
+  cursor: wait !important;
+}
+
+.loading-overlay {
+  display: none;
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  align-items: center;
+  justify-content: center;
+  gap: 0.75rem;
+  background: rgba(255, 255, 255, 0.7);
+}
+
+body.is-loading .loading-overlay {
+  display: flex;
+}
+
+.loading-overlay .spinner {
+  width: 28px;
+  height: 28px;
+  border: 3px solid var(--border);
+  border-top-color: var(--accent);
+  border-radius: 50%;
+  animation: pdc-spin 0.7s linear infinite;
+}
+
+.loading-overlay .loading-message {
+  font-size: 0.9rem;
+  color: var(--text);
+  font-weight: 600;
+}
+
+@keyframes pdc-spin {
+  to { transform: rotate(360deg); }
+}

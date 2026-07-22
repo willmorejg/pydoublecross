@@ -9,7 +9,9 @@ from pydoublecross.config.models import (
     CacheOverride,
     DataSourceConfig,
     DataSourceRef,
+    ExpectationToggles,
     ServerConfig,
+    ValidationEngineChoice,
     ValidationItemConfig,
 )
 
@@ -20,7 +22,9 @@ __all__ = [
     "CacheOverride",
     "DataSourceConfig",
     "DataSourceRef",
+    "ExpectationToggles",
     "ServerConfig",
+    "ValidationEngineChoice",
     "ValidationItemConfig",
     "load_config",
     "save_config",

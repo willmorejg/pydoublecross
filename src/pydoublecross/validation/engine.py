@@ -1,7 +1,7 @@
 # SPDX-FileCopyrightText: 2026 James G Willmore
 # SPDX-License-Identifier: Apache-2.0
 
-"""Ties together data fetch (with caching), Great Expectations checks, and comparison."""
+"""Ties together data fetch (with caching), per-side engine checks, and comparison."""
 
 from __future__ import annotations
 
@@ -9,14 +9,23 @@ import uuid
 from datetime import UTC, datetime
 from typing import Literal
 
+import pandas as pd
+
 from pydoublecross.cache.manager import CacheManager
-from pydoublecross.config.models import AppConfig, DataSourceRef, ValidationItemConfig
+from pydoublecross.config.models import (
+    AppConfig,
+    DataSourceRef,
+    ExpectationToggles,
+    ValidationEngineChoice,
+    ValidationItemConfig,
+)
 from pydoublecross.datasources.factory import DataSourceFactory
 from pydoublecross.exceptions import ValidationEngineError
 from pydoublecross.logging_conf import get_logger, sanitize_for_log
 from pydoublecross.validation.comparators import compare_dataframes
 from pydoublecross.validation.ge_suite import run_side_expectations
-from pydoublecross.validation.results import RunStatus, ValidationRunResult
+from pydoublecross.validation.pandera_suite import run_side_checks as run_pandera_checks
+from pydoublecross.validation.results import EngineCheckResult, RunStatus, ValidationRunResult
 
 logger = get_logger(__name__)
 
@@ -30,6 +39,23 @@ def resolve_cache_mode(no_cache: bool, refresh_cache: bool) -> CacheMode:
     if no_cache:
         return "bypass"
     return "default"
+
+
+def _run_engine_checks(
+    engine_choice: ValidationEngineChoice,
+    source_frame: pd.DataFrame,
+    target_frame: pd.DataFrame,
+    toggles: ExpectationToggles,
+) -> list[EngineCheckResult]:
+    """Run whichever engine(s) `engine_choice` selects against both sides."""
+    results: list[EngineCheckResult] = []
+    if engine_choice in ("great_expectations", "both"):
+        results.append(run_side_expectations(source_frame, "source", toggles))
+        results.append(run_side_expectations(target_frame, "target", toggles))
+    if engine_choice in ("pandera", "both"):
+        results.append(run_pandera_checks(source_frame, "source", toggles))
+        results.append(run_pandera_checks(target_frame, "target", toggles))
+    return results
 
 
 class ValidationEngine:
@@ -98,10 +124,9 @@ class ValidationEngine:
         source_frame, source_cache_hit = self._fetch_side(item.source, cache_mode)
         target_frame, target_cache_hit = self._fetch_side(item.target, cache_mode)
 
-        ge_results = [
-            run_side_expectations(source_frame, "source", item.expectations),
-            run_side_expectations(target_frame, "target", item.expectations),
-        ]
+        engine_results = _run_engine_checks(
+            item.validation_engine, source_frame, target_frame, item.expectations
+        )
 
         outcome = compare_dataframes(
             source_frame,
@@ -112,9 +137,11 @@ class ValidationEngine:
             numeric_tolerance=item.numeric_tolerance,
         )
 
-        ge_passed = all(r.success for r in ge_results)
+        engines_passed = all(r.success for r in engine_results)
         status = (
-            RunStatus.PASSED if outcome.summary.rows_fully_match and ge_passed else RunStatus.FAILED
+            RunStatus.PASSED
+            if outcome.summary.rows_fully_match and engines_passed
+            else RunStatus.FAILED
         )
 
         return ValidationRunResult(
@@ -130,5 +157,5 @@ class ValidationEngine:
             missing_in_source=outcome.missing_in_source,
             mismatches=outcome.mismatches,
             truncated=outcome.truncated,
-            ge_results=ge_results,
+            engine_results=engine_results,
         )

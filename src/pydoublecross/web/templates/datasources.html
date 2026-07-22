@@ -31,7 +31,8 @@ SPDX-License-Identifier: Apache-2.0
             <td class="actions">
               <a href="/datasources/{{ name }}/edit">Edit</a>
               <button type="button" hx-post="/api/datasources/{{ name }}/test"
-                      hx-target="#test-result-{{ loop.index }}" hx-swap="innerHTML">Test connection</button>
+                      hx-target="#test-result-{{ loop.index }}" hx-swap="innerHTML"
+                      data-loading-message="Testing connection to {{ name }}…">Test connection</button>
               <span id="test-result-{{ loop.index }}"></span>
               <form method="post" action="/datasources/{{ name }}/delete" style="display:inline"
                     onsubmit="return confirm('Delete data source {{ name }}?');">
