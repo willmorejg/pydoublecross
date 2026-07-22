@@ -9,7 +9,7 @@
 
   function showLoading(message) {
     document.body.classList.add("is-loading");
-    var messageEl = document.querySelector("#loading-overlay .loading-message");
+    let messageEl = document.querySelector("#loading-overlay .loading-message");
     if (messageEl) {
       messageEl.textContent = message || "Working…";
     }
@@ -23,7 +23,7 @@
   // navigate to a new page on completion, so there's no matching "hide" call;
   // the overlay simply disappears with the old document.
   document.addEventListener("submit", function (event) {
-    var form = event.target;
+    let form = event.target;
     if (!(form instanceof HTMLFormElement)) {
       return;
     }
@@ -42,7 +42,7 @@
   // htmx-driven requests, e.g. the "Test connection" button - these swap content
   // in place rather than navigating, so we do need to hide the overlay again.
   document.body.addEventListener("htmx:beforeRequest", function (event) {
-    var trigger = event.detail && event.detail.elt;
+    let trigger = event.detail && event.detail.elt;
     showLoading(trigger && trigger.dataset ? trigger.dataset.loadingMessage : undefined);
   });
   document.body.addEventListener("htmx:afterRequest", hideLoading);
